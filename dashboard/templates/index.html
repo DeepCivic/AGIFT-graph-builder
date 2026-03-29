@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AGIFT Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+           background: #0f1117; color: #e0e0e0; padding: 2rem; max-width: 960px; margin: 0 auto; }
+    h1 { color: #7dd3fc; margin-bottom: 0.5rem; font-size: 1.5rem; }
+    h2 { color: #94a3b8; margin: 1.5rem 0 0.75rem; font-size: 1.1rem; border-bottom: 1px solid #1e293b; padding-bottom: 0.4rem; }
+    .flash { padding: 0.6rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.9rem; }
+    .flash.success { background: #064e3b; color: #6ee7b7; }
+    .flash.error { background: #7f1d1d; color: #fca5a5; }
+
+    /* Stats bar */
+    .stats { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .stat { background: #1e293b; border-radius: 8px; padding: 0.8rem 1.2rem; flex: 1; min-width: 120px; }
+    .stat .val { font-size: 1.4rem; font-weight: 700; color: #7dd3fc; }
+    .stat .lbl { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat.semantic .val { color: #c084fc; }
+
+    /* Config form */
+    form { background: #1e293b; border-radius: 8px; padding: 1.2rem; }
+    .form-row { display: flex; gap: 1rem; align-items: end; flex-wrap: wrap; margin-bottom: 0.8rem; }
+    label { display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.3rem; }
+    input, select { background: #0f1117; border: 1px solid #334155; color: #e0e0e0;
+                    padding: 0.5rem 0.7rem; border-radius: 6px; font-size: 0.9rem; }
+    input:focus, select:focus { outline: none; border-color: #7dd3fc; }
+    input[type="text"], input[type="number"] { width: 200px; }
+    .wide-input { width: 320px; }
+    .current-key { font-size: 0.8rem; color: #64748b; margin-top: 0.2rem; }
+    .hint { font-size: 0.75rem; color: #475569; margin-top: 0.2rem; }
+    button { background: #0ea5e9; color: #fff; border: none; padding: 0.5rem 1.2rem;
+             border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 500; }
+    button:hover { background: #0284c7; }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; background: #1e293b; border-radius: 8px; overflow: hidden; }
+    th { background: #0f1117; text-align: left; padding: 0.6rem 0.8rem; font-size: 0.75rem;
+         color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+    .cell { padding: 0.5rem 0.8rem; border-top: 1px solid #0f1117; font-size: 0.85rem; }
+    .status-success { color: #6ee7b7; }
+    .status-error { color: #fca5a5; }
+    .sem-val { color: #c084fc; }
+    .empty { color: #475569; font-style: italic; padding: 1rem; text-align: center; }
+
+    /* Run controls */
+    .run-controls { background: #1e293b; border-radius: 8px; padding: 1.2rem; }
+    .run-buttons { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: start; }
+    .run-form { display: flex; flex-direction: column; align-items: center; gap: 0.2rem; }
+    .run-btn { background: #0ea5e9; color: #fff; border: none; padding: 0.5rem 1rem;
+               border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 500; white-space: nowrap; }
+    .run-btn:hover { background: #0284c7; }
+    .run-btn.secondary { background: #6366f1; }
+    .run-btn.secondary:hover { background: #4f46e5; }
+    .run-btn.outline { background: transparent; border: 1px solid #475569; color: #94a3b8; }
+    .run-btn.outline:hover { border-color: #7dd3fc; color: #7dd3fc; }
+    .run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .run-output-wrap { margin-top: 1rem; }
+    .run-output-wrap.hidden { display: none; }
+    .run-header { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.5rem; }
+    .badge { font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 4px; font-weight: 600; }
+    .badge.running { background: #0ea5e9; color: #fff; }
+    .badge.done { background: #064e3b; color: #6ee7b7; }
+    .run-cmd { font-size: 0.75rem; color: #64748b; }
+    .run-output { background: #0f1117; border: 1px solid #1e293b; border-radius: 6px;
+                  padding: 0.8rem; font-size: 0.8rem; color: #94a3b8; max-height: 400px;
+                  overflow-y: auto; white-space: pre-wrap; word-break: break-word; font-family: monospace; }
+</style>
+</head>
+<body>
+  <h1>AGIFT Dashboard</h1>
+  <p style="color:#64748b; margin-bottom:1.5rem; font-size:0.85rem;">
+    Vocabulary graph &amp; embedding pipeline — structural + semantic edges
+  </p>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}
+  <div class="flash {{ cat }}">{{ msg }}</div>
+  {% endfor %}
+  {% endwith %}
+
+  <!-- Graph stats -->
+  <div class="stats">
+    <div class="stat">
+      <div class="val">{{ stats.total_terms }}</div>
+      <div class="lbl">Terms</div>
+    </div>
+    <div class="stat">
+      <div class="val">{{ stats.embedded_terms }}</div>
+      <div class="lbl">Embedded</div>
+    </div>
+    <div class="stat">
+      <div class="val">{{ stats.structural_edges }}</div>
+      <div class="lbl">Structural</div>
+    </div>
+    <div class="stat semantic">
+      <div class="val">{{ stats.semantic_edges }}</div>
+      <div class="lbl">Semantic</div>
+    </div>
+    {% for d, c in stats.by_depth.items() %}
+    <div class="stat">
+      <div class="val">{{ c }}</div>
+      <div class="lbl">Level {{ d }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Config -->
+  <h2>Configuration</h2>
+  <form method="POST" action="/config">
+    <div class="form-row">
+      <div>
+        <label for="provider">Embedding Provider</label>
+        <select id="provider" name="provider">
+          {% for p in valid_providers %}
+          <option value="{{ p }}" {% if p == config.provider %}selected{% endif %}>{{ p }}</option>
+          {% endfor %}
+        </select>
+        <div class="hint">local = free (sentence-transformers, CPU)</div>
+      </div>
+      <div>
+        <label for="dimension">Embedding Dimension</label>
+        <select id="dimension" name="dimension">
+          {% for d in valid_dimensions %}
+          <option value="{{ d }}" {% if d == config.dimension %}selected{% endif %}
+            {% if d in local_only_dimensions %}data-local="1"{% endif %}>{{ d }}{% if d in local_only_dimensions %} ★{% endif %}</option>
+          {% endfor %}
+        </select>
+        <div class="hint">★ = available for local provider</div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label for="api_key">Isaacus API Key</label>
+        <input type="text" id="api_key" name="api_key" class="wide-input"
+               placeholder="Enter new key (leave blank to keep current)">
+        {% if masked_key %}
+        <div class="current-key">Current: {{ masked_key }}</div>
+        {% else %}
+        <div class="current-key">Not set (not needed for local provider)</div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label for="similarity_threshold">Similarity Threshold</label>
+        <input type="number" id="similarity_threshold" name="similarity_threshold"
+               value="{{ config.similarity_threshold }}" min="0" max="1" step="0.05">
+        <div class="hint">Min cosine similarity for SIMILAR_TO edges</div>
+      </div>
+      <div>
+        <label for="semantic_edge_weight">Semantic Edge Weight</label>
+        <input type="number" id="semantic_edge_weight" name="semantic_edge_weight"
+               value="{{ config.semantic_edge_weight }}" min="0" max="1" step="0.1">
+        <div class="hint">Query-time weight (structural = 1.0)</div>
+      </div>
+      <div>
+        <button type="submit">Save</button>
+      </div>
+    </div>
+  </form>
+
+  <!-- Run Controls -->
+  <h2>Run Controls</h2>
+  <div class="run-controls">
+    <div class="run-buttons">
+      <form method="POST" action="/run" class="run-form">
+        <input type="hidden" name="preset" value="full">
+        <button type="submit" class="run-btn">Full Pipeline</button>
+        <span class="hint">Fetch + graph + embed + semantic edges</span>
+      </form>
+      <form method="POST" action="/run" class="run-form">
+        <input type="hidden" name="preset" value="graph_only">
+        <button type="submit" class="run-btn secondary">Graph Only</button>
+        <span class="hint">Skip embeddings and semantic edges</span>
+      </form>
+      <form method="POST" action="/run" class="run-form">
+        <input type="hidden" name="preset" value="local_384">
+        <button type="submit" class="run-btn secondary">Local 384d</button>
+        <span class="hint">Free sentence-transformers (MiniLM)</span>
+      </form>
+      <form method="POST" action="/run" class="run-form">
+        <input type="hidden" name="preset" value="local_768">
+        <button type="submit" class="run-btn secondary">Local 768d</button>
+        <span class="hint">Free sentence-transformers (mpnet)</span>
+      </form>
+      <form method="POST" action="/run" class="run-form">
+        <input type="hidden" name="preset" value="dry_run">
+        <button type="submit" class="run-btn outline">Dry Run</button>
+        <span class="hint">Fetch only, no writes</span>
+      </form>
+      <form method="POST" action="/run" class="run-form">
+        <input type="hidden" name="preset" value="force_embed">
+        <button type="submit" class="run-btn outline">Force Re-embed</button>
+        <span class="hint">Re-embed all + rebuild semantic edges</span>
+      </form>
+    </div>
+    <div id="run-output-wrap" class="run-output-wrap hidden">
+      <div class="run-header">
+        <span id="run-status-badge" class="badge">Running</span>
+        <code id="run-command" class="run-cmd"></code>
+      </div>
+      <pre id="run-output" class="run-output"></pre>
+    </div>
+  </div>
+
+  <!-- AGIFT Worker Runs -->
+  <h2>AGIFT Worker — Last 5 Runs</h2>
+  {% if agift_logs %}
+  <table>
+    <thead>
+      <tr>
+        <th>Status</th>
+        <th>Finished</th>
+        <th>Fetched</th>
+        <th>Created</th>
+        <th>Embedded</th>
+        <th>Provider</th>
+        <th>Sem. Edges</th>
+        <th>Errors</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log in agift_logs %}
+      <tr>
+        <td class="cell status-{{ log.get('status', 'error') }}">{{ log.get('status', '?') }}</td>
+        <td class="cell">{{ log.get('finished_at', '—') }}</td>
+        <td class="cell">{{ log.get('terms_fetched', 0) }}</td>
+        <td class="cell">{{ log.get('terms_created', 0) }}</td>
+        <td class="cell">{{ log.get('terms_embedded', 0) }}</td>
+        <td class="cell">{{ log.get('embedding_provider', '—') }}</td>
+        <td class="cell sem-val">{{ log.get('semantic_edges_created', 0) }}</td>
+        <td class="cell">{{ log.get('error_message', '') or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">No runs recorded yet</div>
+  {% endif %}
+
+  <!-- Enrichment Worker Runs -->
+  <h2>Enrichment Worker — Last 5 Runs</h2>
+  {% if enrichment_logs %}
+  <table>
+    <thead>
+      <tr>
+        <th>Status</th>
+        <th>Finished</th>
+        <th>Details</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log in enrichment_logs %}
+      <tr>
+        <td class="cell status-{{ log.get('status', 'error') }}">{{ log.get('status', '?') }}</td>
+        <td class="cell">{{ log.get('finished_at', '—') }}</td>
+        <td class="cell">{{ log.get('details', '—') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">No runs recorded yet</div>
+  {% endif %}
+
+  <script>
+    (function() {
+      var wrap = document.getElementById('run-output-wrap');
+      var output = document.getElementById('run-output');
+      var badge = document.getElementById('run-status-badge');
+      var cmdEl = document.getElementById('run-command');
+      var buttons = document.querySelectorAll('.run-btn');
+      var polling = false;
+
+      function poll() {
+        fetch('/run/status')
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.command) {
+              wrap.classList.remove('hidden');
+              cmdEl.textContent = data.command;
+              output.textContent = data.output;
+              output.scrollTop = output.scrollHeight;
+            }
+            if (data.running) {
+              badge.textContent = 'Running';
+              badge.className = 'badge running';
+              buttons.forEach(function(b) { b.disabled = true; });
+              setTimeout(poll, 1500);
+            } else {
+              badge.textContent = 'Done';
+              badge.className = 'badge done';
+              buttons.forEach(function(b) { b.disabled = false; });
+              polling = false;
+            }
+          })
+          .catch(function() {
+            polling = false;
+            buttons.forEach(function(b) { b.disabled = false; });
+          });
+      }
+
+      // Start polling on page load to catch in-progress runs
+      polling = true;
+      poll();
+
+      // Also start polling when a form is submitted
+      document.querySelectorAll('.run-form').forEach(function(form) {
+        form.addEventListener('submit', function() {
+          if (!polling) {
+            polling = true;
+            setTimeout(poll, 500);
+          }
+        });
+      });
+    })();
+  </script>
+
+</body>
+</html>
