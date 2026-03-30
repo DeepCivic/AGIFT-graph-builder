@@ -13,8 +13,9 @@ RUN pip install --no-cache-dir \
     sentence-transformers>=3.0.0 \
     torch --extra-index-url https://download.pytorch.org/whl/cpu
 
-COPY agift/import_agift.py /app/import_agift.py
-COPY agift/worker/entrypoint.sh /entrypoint.sh
+COPY agift/ /app/agift/
+COPY import_agift.py /app/import_agift.py
+COPY worker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Model cache volume mount point

@@ -20,7 +20,7 @@ RUN pip install --no-cache-dir \
     flask>=3.0.0 \
     neo4j>=5.0.0
 
-COPY agift/dashboard/ /app/
+COPY dashboard/ /app/
 
 EXPOSE 5050
 
