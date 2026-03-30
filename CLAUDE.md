@@ -14,20 +14,20 @@ AGIFT Graph Builder — a Neo4j-based knowledge graph that ingests the Australia
 ### File Size Limit
 - **750 lines max per file.** If a file exceeds this, propose a refactoring plan to the human for approval before splitting. Do not refactor without confirmation.
 
-### Known Oversized File
-- `import_agift.py` (952 lines) exceeds the 750-line limit. Proposed refactor path:
-  - Extract `fetch` stage (hierarchy + alt-labels) into `agift/fetch.py`
-  - Extract `graph` stage (schema + upsert) into `agift/graph.py`
-  - Extract `embed` stage (Isaacus + local providers) into `agift/embed.py`
-  - Extract `link` stage (cosine similarity + semantic edges) into `agift/link.py`
-  - Keep shared helpers (`get_neo4j_driver`, `get_config_from_neo4j`, `log_run`) in `agift/common.py`
-  - Retain `import_agift.py` as a thin CLI entry point calling into the package
-  - **Status: awaiting human approval before proceeding.**
+### Refactored: `import_agift.py` → `agift/` package
+- The original 952-line monolith has been split into the `agift/` package:
+  - `agift/common.py` — constants, Neo4j helpers, run logging, summary
+  - `agift/fetch.py` — TemaTres API hierarchy fetching + alt-labels
+  - `agift/graph.py` — schema setup + node/edge upsert
+  - `agift/embed.py` — Isaacus + local sentence-transformer providers
+  - `agift/link.py` — cosine similarity + semantic edge building
+  - `import_agift.py` — thin CLI entry point (imports from the package)
 
 ## Architecture
 
 ```
-import_agift.py    — 4-stage ETL pipeline (fetch → graph → embed → link)
+import_agift.py    — CLI entry point for the 4-stage ETL pipeline
+agift/             — pipeline package (common, fetch, graph, embed, link)
 dashboard/app.py   — Flask web UI for config, run control, and monitoring
 worker/            — Docker + cron for scheduled pipeline runs
 ```
