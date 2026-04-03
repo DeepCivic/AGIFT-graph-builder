@@ -357,7 +357,6 @@ def run_status():
             "command": _run_state["command"],
             "output": _run_state["output"],
         })
-    app.run(host="0.0.0.0", port=5050, debug=False)
 
 
 if __name__ == "__main__":

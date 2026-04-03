@@ -184,7 +184,7 @@ class Neo4jBackend(GraphBackend):
         with self._driver.session() as session:
             result = session.run(
                 """
-                MATCH (a:Term)-[:PARENT_OF]-(b:Term)
+                MATCH (a:Term)-[:PARENT_OF]->(b:Term)
                 RETURN a.term_id AS a_id, b.term_id AS b_id
                 """
             )
