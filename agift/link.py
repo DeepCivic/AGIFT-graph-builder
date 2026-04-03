@@ -1,5 +1,6 @@
 """Stage 4: Link — build semantic similarity edges from embeddings."""
 
+from agift.backend import GraphBackend
 from agift.common import SEMANTIC_EDGE_WEIGHT, SIMILARITY_THRESHOLD
 
 
@@ -22,7 +23,7 @@ def _cosine_similarity(a: list[float], b: list[float]) -> float:
 
 
 def build_semantic_edges(
-    driver,
+    backend: GraphBackend,
     threshold: float = SIMILARITY_THRESHOLD,
     weight: float = SEMANTIC_EDGE_WEIGHT,
 ) -> dict:
@@ -36,7 +37,7 @@ def build_semantic_edges(
     cross-dimension comparisons.
 
     Args:
-        driver: Neo4j driver.
+        backend: Graph backend instance.
         threshold: Minimum cosine similarity to create an edge.
         weight: Edge weight for query-time weighting.
 
@@ -45,18 +46,7 @@ def build_semantic_edges(
     """
     stats = {"created": 0, "skipped_structural": 0, "below_threshold": 0}
 
-    # Fetch all embedded terms grouped by dimension
-    with driver.session() as session:
-        result = session.run(
-            """
-            MATCH (t:Term)
-            WHERE t.embedding IS NOT NULL
-            RETURN t.term_id AS tid, t.embedding AS emb,
-                   t.embedding_dimension AS dim
-            ORDER BY t.term_id
-            """
-        )
-        terms = [(r["tid"], r["emb"], r["dim"]) for r in result]
+    terms = backend.get_all_embedded_terms()
 
     if len(terms) < 2:
         print("  Not enough embedded terms for semantic edges")
@@ -67,22 +57,10 @@ def build_semantic_edges(
     for tid, emb, dim in terms:
         by_dim.setdefault(dim, []).append((tid, emb))
 
-    # Fetch existing structural edges for skip-check
-    with driver.session() as session:
-        result = session.run(
-            """
-            MATCH (a:Term)-[:PARENT_OF]-(b:Term)
-            RETURN a.term_id AS a_id, b.term_id AS b_id
-            """
-        )
-        structural_pairs = {
-            (min(r["a_id"], r["b_id"]), max(r["a_id"], r["b_id"]))
-            for r in result
-        }
+    structural_pairs = backend.get_structural_pairs()
 
     # Clear existing semantic edges (rebuild fresh each run)
-    with driver.session() as session:
-        session.run("MATCH ()-[r:SIMILAR_TO]->() DELETE r")
+    backend.delete_all_semantic_edges()
 
     for dim, dim_terms in by_dim.items():
         print(f"  Computing similarities for {len(dim_terms)} terms "
@@ -106,25 +84,8 @@ def build_semantic_edges(
                 else:
                     stats["below_threshold"] += 1
 
-        # Batch-create edges
-        with driver.session() as session:
-            for tid_a, tid_b, score in pairs_to_create:
-                session.run(
-                    """
-                    MATCH (a:Term {term_id: $a_id})
-                    MATCH (b:Term {term_id: $b_id})
-                    CREATE (a)-[:SIMILAR_TO {
-                        score: $score,
-                        weight: $weight,
-                        edge_type: 'semantic',
-                        created_at: datetime()
-                    }]->(b)
-                    """,
-                    a_id=tid_a,
-                    b_id=tid_b,
-                    score=round(score, 4),
-                    weight=weight,
-                )
-                stats["created"] += 1
+        for tid_a, tid_b, score in pairs_to_create:
+            backend.create_semantic_edge(tid_a, tid_b, score, weight)
+            stats["created"] += 1
 
     return stats

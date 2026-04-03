@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-AGIFT Graph Builder — a Neo4j-based knowledge graph that ingests the Australian Government Interactive Functions Thesaurus (AGIFT) vocabulary, enriches it with vector embeddings, and builds semantic similarity edges. Apache 2.0 licensed open source project.
+AGIFT Graph Builder — a knowledge graph pipeline that ingests the Australian Government Interactive Functions Thesaurus (AGIFT) vocabulary, enriches it with vector embeddings, and builds semantic similarity edges. Supports Neo4j and CogDB backends. Apache 2.0 licensed open source project.
 
 ## Project Rules
 
@@ -16,18 +16,24 @@ AGIFT Graph Builder — a Neo4j-based knowledge graph that ingests the Australia
 
 ### Refactored: `import_agift.py` → `agift/` package
 - The original 952-line monolith has been split into the `agift/` package:
+  - `agift/backend.py` — `GraphBackend` abstract interface
+  - `agift/neo4j_backend.py` — Neo4j backend implementation
+  - `agift/cogdb_backend.py` — CogDB embedded backend implementation
   - `agift/cli.py` — CLI entry point + `run_pipeline()` programmatic API
-  - `agift/common.py` — constants, Neo4j helpers, run logging, summary
+  - `agift/common.py` — constants, backend factory, summary output
   - `agift/fetch.py` — TemaTres API hierarchy fetching + alt-labels
-  - `agift/graph.py` — schema setup + node/edge upsert
-  - `agift/embed.py` — Isaacus + local sentence-transformer providers
-  - `agift/link.py` — cosine similarity + semantic edge building
+  - `agift/graph.py` — schema setup + node/edge upsert (backend-agnostic)
+  - `agift/embed.py` — Isaacus + local sentence-transformer providers (backend-agnostic)
+  - `agift/link.py` — cosine similarity + semantic edge building (backend-agnostic)
   - `import_agift.py` — backward-compatible entry point (imports from the package)
 
 ## Architecture
 
 ```
 agift/cli.py         — CLI entry point (`agift` command) + run_pipeline() API
+agift/backend.py     — GraphBackend ABC (interface for all backends)
+agift/neo4j_backend.py — Neo4j implementation
+agift/cogdb_backend.py — CogDB implementation
 agift/               — pipeline package (common, fetch, graph, embed, link)
 docker-compose.yml   — full stack: Neo4j + dashboard + worker
 dashboard/app.py     — Flask web UI for config, run control, and monitoring
@@ -35,7 +41,7 @@ worker/              — Docker + cron for scheduled pipeline runs
 import_agift.py      — backward-compatible entry point
 ```
 
-**Data flow:** TemaTres REST API → Neo4j nodes/edges → embeddings → semantic similarity edges
+**Data flow:** TemaTres REST API → graph nodes/edges → embeddings → semantic similarity edges
 
 ## Build & Run
 
@@ -50,13 +56,19 @@ agift --dry-run
 agift --skip-embed
 agift --force-embed
 
+# CogDB backend (no server required)
+pip install agift-graph[cogdb]
+agift --backend cogdb
+
 # Programmatic usage
 from agift import run_pipeline
 run_pipeline(provider="local", dimension=384)
+run_pipeline(backend_type="cogdb", provider="local", dimension=384)
 ```
 
 ## Key Dependencies
 
 - Python 3.13+, Neo4j 5.0+, Flask 3.0+
 - neo4j (driver), sentence-transformers (local embeddings)
+- cogdb (optional embedded graph backend)
 - Isaacus kanon-2-embedder API (optional cloud embeddings)

@@ -2,10 +2,11 @@
 
 import os
 
+from agift.backend import GraphBackend
 from agift.common import LOCAL_MODELS
 
 
-def build_hierarchical_text(driver, term_id: int) -> str:
+def build_hierarchical_text(backend: GraphBackend, term_id: int) -> str:
     """Build embedding input text using the term's full hierarchy path.
 
     For a L3 term like "Water quality monitoring", produces:
@@ -14,50 +15,37 @@ def build_hierarchical_text(driver, term_id: int) -> str:
     Also appends alt labels for richer semantic coverage.
 
     Args:
-        driver: Neo4j driver.
+        backend: Graph backend instance.
         term_id: The term to build text for.
 
     Returns:
         Hierarchical context string for embedding.
     """
-    with driver.session() as session:
-        # Walk up the tree to build the path
-        result = session.run(
-            """
-            MATCH path = (root:Term)-[:PARENT_OF*0..2]->(t:Term {term_id: $tid})
-            WHERE NOT ()-[:PARENT_OF]->(root)
-            RETURN [n IN nodes(path) | n.label] AS chain,
-                   t.alt_labels AS alts
-            """,
-            tid=term_id,
-        )
-        record = result.single()
-        if not record:
-            # Fallback: just the term itself (shouldn't happen)
-            result2 = session.run(
-                "MATCH (t:Term {term_id: $tid}) RETURN t.label AS label, t.alt_labels AS alts",
-                tid=term_id,
-            )
-            r2 = result2.single()
-            return r2["label"] if r2 else ""
+    chain, alts = backend.get_hierarchy_path(term_id)
+    if not chain:
+        # Fallback: just the term itself
+        label, alts = backend.get_term_label_and_alts(term_id)
+        return label
 
-        chain = record["chain"]
-        alts = record["alts"] or []
-
-        text = " > ".join(chain)
-        if alts:
-            text += f" (also known as: {', '.join(alts)})"
-        return text
+    text = " > ".join(chain)
+    if alts:
+        text += f" (also known as: {', '.join(alts)})"
+    return text
 
 
-def embed_terms(driver, term_ids: list[int], api_key: str, dimension: int) -> dict:
+def embed_terms(
+    backend: GraphBackend,
+    term_ids: list[int],
+    api_key: str,
+    dimension: int,
+) -> dict:
     """Generate and store Isaacus embeddings for AGIFT terms.
 
     Only embeds terms in the provided list (new or changed terms).
     Batches API calls for efficiency.
 
     Args:
-        driver: Neo4j driver.
+        backend: Graph backend instance.
         term_ids: List of term_ids to embed.
         api_key: Isaacus API key.
         dimension: Embedding dimension.
@@ -83,7 +71,7 @@ def embed_terms(driver, term_ids: list[int], api_key: str, dimension: int) -> di
         valid_ids = []
 
         for tid in batch_ids:
-            text = build_hierarchical_text(driver, tid)
+            text = build_hierarchical_text(backend, tid)
             if text:
                 texts.append(text)
                 valid_ids.append(tid)
@@ -98,21 +86,11 @@ def embed_terms(driver, term_ids: list[int], api_key: str, dimension: int) -> di
                 dimensions=dimension,
             )
 
-            with driver.session() as session:
-                for j, embedding_data in enumerate(response.embeddings):
-                    session.run(
-                        """
-                        MATCH (t:Term {term_id: $tid})
-                        SET t.embedding = $embedding,
-                            t.embedding_dimension = $dim,
-                            t.embedding_provider = 'isaacus',
-                            t.embedded_at = datetime()
-                        """,
-                        tid=valid_ids[j],
-                        embedding=embedding_data.embedding,
-                        dim=dimension,
-                    )
-                    stats["embedded"] += 1
+            for j, embedding_data in enumerate(response.embeddings):
+                backend.store_embedding(
+                    valid_ids[j], embedding_data.embedding, dimension, "isaacus"
+                )
+                stats["embedded"] += 1
 
             print(f"  Embedded batch {i // batch_size + 1}: {len(texts)} terms")
 
@@ -123,17 +101,21 @@ def embed_terms(driver, term_ids: list[int], api_key: str, dimension: int) -> di
     return stats
 
 
-def embed_terms_local(driver, term_ids: list[int], dimension: int) -> dict:
+def embed_terms_local(
+    backend: GraphBackend,
+    term_ids: list[int],
+    dimension: int,
+) -> dict:
     """Generate and store embeddings using local sentence-transformers.
 
     Uses CPU-only inference. Model is selected based on dimension:
-      384 → all-MiniLM-L6-v2
-      768 → all-mpnet-base-v2
+      384 -> all-MiniLM-L6-v2
+      768 -> all-mpnet-base-v2
 
     Models are cached in /app/models (Docker) or ~/.cache/huggingface.
 
     Args:
-        driver: Neo4j driver.
+        backend: Graph backend instance.
         term_ids: List of term_ids to embed.
         dimension: Embedding dimension (384 or 768).
 
@@ -167,7 +149,7 @@ def embed_terms_local(driver, term_ids: list[int], dimension: int) -> dict:
         valid_ids = []
 
         for tid in batch_ids:
-            text = build_hierarchical_text(driver, tid)
+            text = build_hierarchical_text(backend, tid)
             if text:
                 texts.append(text)
                 valid_ids.append(tid)
@@ -178,21 +160,11 @@ def embed_terms_local(driver, term_ids: list[int], dimension: int) -> dict:
         try:
             embeddings = model.encode(texts, show_progress_bar=False)
 
-            with driver.session() as session:
-                for j, vec in enumerate(embeddings):
-                    session.run(
-                        """
-                        MATCH (t:Term {term_id: $tid})
-                        SET t.embedding = $embedding,
-                            t.embedding_dimension = $dim,
-                            t.embedding_provider = 'local',
-                            t.embedded_at = datetime()
-                        """,
-                        tid=valid_ids[j],
-                        embedding=vec.tolist(),
-                        dim=dimension,
-                    )
-                    stats["embedded"] += 1
+            for j, vec in enumerate(embeddings):
+                backend.store_embedding(
+                    valid_ids[j], vec.tolist(), dimension, "local"
+                )
+                stats["embedded"] += 1
 
             print(f"  Embedded batch {i // batch_size + 1}: {len(texts)} terms")
 

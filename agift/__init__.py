@@ -1,5 +1,6 @@
-"""AGIFT Graph Builder — modular ETL pipeline for Neo4j."""
+"""AGIFT Graph Builder — modular ETL pipeline with pluggable graph backends."""
 
+from agift.backend import GraphBackend
 from agift.common import (
     AGIFT_TOP_TO_DCAT,
     LOCAL_MODELS,
@@ -9,8 +10,10 @@ from agift.common import (
     SIMILARITY_THRESHOLD,
     STRUCTURAL_EDGE_WEIGHT,
     TEMATRES_BASE,
+    VALID_BACKENDS,
     VALID_DIMENSIONS,
     VALID_PROVIDERS,
+    create_backend,
     get_config_from_neo4j,
     get_neo4j_driver,
     log_run,
@@ -25,6 +28,7 @@ from agift.cli import run_pipeline
 __all__ = [
     "AGIFT_TOP_TO_DCAT",
     "AgiftTerm",
+    "GraphBackend",
     "LOCAL_MODELS",
     "PROVIDER_ISAACUS",
     "PROVIDER_LOCAL",
@@ -32,10 +36,12 @@ __all__ = [
     "SIMILARITY_THRESHOLD",
     "STRUCTURAL_EDGE_WEIGHT",
     "TEMATRES_BASE",
+    "VALID_BACKENDS",
     "VALID_DIMENSIONS",
     "VALID_PROVIDERS",
     "build_hierarchical_text",
     "build_semantic_edges",
+    "create_backend",
     "embed_terms",
     "embed_terms_local",
     "ensure_schema",

@@ -35,9 +35,11 @@ dependencies = [
 embeddings = ["sentence-transformers>=2.2.0"]
 local = ["sentence-transformers>=2.2.0"]  # alias for embeddings
 isaacus = ["isaacus>=0.1.0"]
+cogdb = ["cogdb>=0.1.0"]
 all = [
     "sentence-transformers>=2.2.0",
     "isaacus>=0.1.0",
+    "cogdb>=0.1.0",
 ]
 dev = [
     "pytest>=7.0.0",
