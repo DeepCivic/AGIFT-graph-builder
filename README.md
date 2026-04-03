@@ -4,10 +4,10 @@ Australian Government Interactive Functions Thesaurus (AGIFT) as a knowledge gra
 
 ## What it does
 
-Fetches the full AGIFT vocabulary from the [TemaTres API](https://vocabularyserver.com/agift/), builds a Neo4j graph with structural hierarchy edges, generates embeddings (free local or Isaacus API), then creates semantic similarity edges between related terms.
+Fetches the full AGIFT vocabulary from the [TemaTres API](https://vocabularyserver.com/agift/), builds a graph with structural hierarchy edges, generates embeddings (free local or Isaacus API), then creates semantic similarity edges between related terms.
 
 ```
-TemaTres API ──► Neo4j Graph ──► Embeddings ──► Semantic Edges
+TemaTres API ──►  Graph ──► Embeddings ──► Semantic Edges
   (AGIFT)        (PARENT_OF)     (384/512/768d)  (SIMILAR_TO)
 ```
 
