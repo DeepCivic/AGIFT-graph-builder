@@ -147,7 +147,7 @@ agift/
 ├── graph.py                 # Schema setup + node/edge upsert
 ├── embed.py                 # Embedding providers (local + Isaacus)
 ├── link.py                  # Cosine similarity + semantic edges
-docker-compose.yml           # Neo4j for local development
+docker-compose.yml           # Full stack (Neo4j + dashboard + worker)
 dashboard/
 ├── app.py                   # Flask dashboard + run controls
 ├── templates/index.html
