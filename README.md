@@ -132,6 +132,12 @@ agift --provider local --dimension 384
 # Force re-embed all terms
 agift --force-embed
 
+# Custom similarity threshold for semantic edges
+agift --threshold 0.65
+
+# Faster run: skip alt label fetching
+agift --skip-alt
+
 # Dry run (fetch from API, no writes)
 agift --dry-run
 ```
