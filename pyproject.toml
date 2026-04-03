@@ -32,7 +32,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-local = ["sentence-transformers>=2.2.0"]
+embeddings = ["sentence-transformers>=2.2.0"]
+local = ["sentence-transformers>=2.2.0"]  # alias for embeddings
 isaacus = ["isaacus>=0.1.0"]
 all = [
     "sentence-transformers>=2.2.0",

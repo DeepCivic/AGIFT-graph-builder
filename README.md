@@ -24,11 +24,34 @@ Nodes carry DCAT-AP theme mappings for interoperability with European open data 
 
 ## Quick start
 
+### Path A — Docker (zero config)
+
 ```bash
-docker compose -f docker-compose.agift.yml up -d --build
+pip install agift-graph[all]
+docker compose up -d          # starts Neo4j on localhost:7687
+agift                         # fetches AGIFT, builds graph, embeds
 ```
 
-Then open the dashboard at http://localhost:5050 and click "Full Pipeline" or "Graph Only".
+### Path B — existing Neo4j
+
+```bash
+pip install agift-graph[all]
+export NEO4J_URI=bolt://my-server:7687
+export NEO4J_USER=neo4j
+export NEO4J_PASSWORD=mypassword
+agift
+```
+
+The CLI reads env vars with sensible defaults (`bolt://localhost:7687`, `neo4j`/`changeme`) that match the included `docker-compose.yml`.
+
+## Install extras
+
+| Install | What you get | Size |
+|---------|-------------|------|
+| `pip install agift-graph` | Neo4j driver + fetch + graph build | Lightweight |
+| `pip install agift-graph[embeddings]` | + sentence-transformers + torch | ~2 GB |
+| `pip install agift-graph[isaacus]` | + Isaacus API client | Small |
+| `pip install agift-graph[all]` | Everything | ~2 GB |
 
 ## Embedding providers
 
@@ -37,24 +60,45 @@ Then open the dashboard at http://localhost:5050 and click "Full Pipeline" or "G
 | local (sentence-transformers) | Free | 384, 768 | Nothing — runs on CPU |
 | isaacus (kanon-2-embedder) | Paid | 256–1792 | Set API key in dashboard |
 
-The local provider uses `all-MiniLM-L6-v2` (384d) or `all-mpnet-base-v2` (768d). Models are downloaded on first run and cached in a Docker volume.
+The local provider uses `all-MiniLM-L6-v2` (384d) or `all-mpnet-base-v2` (768d). Models are downloaded on first run and cached.
+
+## Programmatic usage
+
+```python
+from agift import run_pipeline
+
+# Run the full pipeline from Python code
+run_pipeline(provider="local", dimension=384)
+
+# Or with explicit Neo4j connection
+run_pipeline(
+    neo4j_uri="bolt://localhost:7687",
+    neo4j_user="neo4j",
+    neo4j_password="changeme",
+    skip_embed=True,
+)
+```
 
 ## Configuration
 
-Copy `.env.example` to `.env` and edit:
-
-```bash
-cp agift/.env.example .env
-```
-
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `NEO4J_PASSWORD` | `changeme` | Neo4j database password |
+| `NEO4J_URI` | `bolt://localhost:7687` | Neo4j connection URI |
+| `NEO4J_USER` | `neo4j` | Neo4j username |
+| `NEO4J_PASSWORD` | `changeme` | Neo4j password |
 | `ISAACUS_API_KEY` | (empty) | Isaacus API key (optional) |
 
 All other settings (dimension, provider, similarity threshold, semantic edge weight) are configured via the dashboard UI and stored in Neo4j.
 
-## Services
+## Full Docker stack
+
+For the full stack with dashboard and worker:
+
+```bash
+docker compose -f docker-compose.agift.yml up -d --build
+```
+
+Then open the dashboard at http://localhost:5050 and click "Full Pipeline" or "Graph Only".
 
 | Service | Port | Description |
 |---------|------|-------------|
@@ -66,43 +110,42 @@ All other settings (dimension, provider, similarity threshold, semantic edge wei
 
 ```bash
 # Full pipeline (fetch + graph + embed + semantic edges)
-docker exec agift-worker python import_agift.py
+agift
 
 # Graph only (no embeddings)
-docker exec agift-worker python import_agift.py --skip-embed --skip-semantic
+agift --skip-embed --skip-semantic
 
 # Local embeddings, 384 dimensions
-docker exec agift-worker python import_agift.py --provider local --dimension 384
+agift --provider local --dimension 384
 
 # Force re-embed all terms
-docker exec agift-worker python import_agift.py --force-embed
+agift --force-embed
 
 # Dry run (fetch from API, no writes)
-docker exec agift-worker python import_agift.py --dry-run
-```
-
-## Docker Hub (no source code needed)
-
-```bash
-docker compose -f docker-compose.agift.hub.yml up -d
+agift --dry-run
 ```
 
 ## Project structure
 
 ```
 agift/
-├── import_agift.py          # 4-stage pipeline (fetch/graph/embed/link)
-├── dashboard/
-│   ├── Dockerfile
-│   ├── app.py               # Flask dashboard + run controls
-│   └── templates/
-│       └── index.html
-├── worker/
-│   ├── Dockerfile
-│   └── entrypoint.sh        # Cron scheduler + manual trigger
-├── .env.example
-├── LICENSE                   # Apache 2.0
-└── README.md
+├── __init__.py              # Public API exports
+├── cli.py                   # CLI entry point + run_pipeline()
+├── common.py                # Constants, Neo4j helpers, logging
+├── fetch.py                 # TemaTres API fetching
+├── graph.py                 # Schema setup + node/edge upsert
+├── embed.py                 # Embedding providers (local + Isaacus)
+├── link.py                  # Cosine similarity + semantic edges
+docker-compose.yml           # Neo4j for local development
+dashboard/
+├── app.py                   # Flask dashboard + run controls
+├── templates/index.html
+worker/
+├── Dockerfile
+├── entrypoint.sh            # Cron scheduler + manual trigger
+import_agift.py              # Backward-compatible entry point
+pyproject.toml
+LICENSE                      # Apache 2.0
 ```
 
 ## Data source

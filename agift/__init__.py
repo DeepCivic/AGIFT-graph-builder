@@ -20,6 +20,7 @@ from agift.fetch import AgiftTerm, fetch_full_hierarchy
 from agift.graph import ensure_schema, upsert_graph
 from agift.embed import build_hierarchical_text, embed_terms, embed_terms_local
 from agift.link import build_semantic_edges
+from agift.cli import run_pipeline
 
 __all__ = [
     "AGIFT_TOP_TO_DCAT",
@@ -43,5 +44,6 @@ __all__ = [
     "get_neo4j_driver",
     "log_run",
     "print_summary",
+    "run_pipeline",
     "upsert_graph",
 ]
