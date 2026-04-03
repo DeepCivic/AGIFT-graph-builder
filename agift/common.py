@@ -124,10 +124,7 @@ def get_config_from_neo4j(driver) -> dict:
     Pipeline code should use ``backend.get_config()`` instead.
     """
     from agift.neo4j_backend import Neo4jBackend
-    # Wrap the raw driver in a temporary backend to reuse the query
-    backend = Neo4jBackend.__new__(Neo4jBackend)
-    backend._driver = driver
-    return backend.get_config()
+    return Neo4jBackend.from_driver(driver).get_config()
 
 
 def log_run(driver, status: str, details: dict) -> None:
@@ -137,9 +134,7 @@ def log_run(driver, status: str, details: dict) -> None:
     Pipeline code should use ``backend.log_run()`` instead.
     """
     from agift.neo4j_backend import Neo4jBackend
-    backend = Neo4jBackend.__new__(Neo4jBackend)
-    backend._driver = driver
-    backend.log_run(status, details)
+    Neo4jBackend.from_driver(driver).log_run(status, details)
 
 
 # ---------------------------------------------------------------------------

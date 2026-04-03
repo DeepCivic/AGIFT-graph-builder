@@ -29,6 +29,19 @@ class Neo4jBackend(GraphBackend):
             self._uri, auth=(self._user, self._password)
         )
 
+    @classmethod
+    def from_driver(cls, driver) -> "Neo4jBackend":
+        """Wrap an existing Neo4j driver in a backend instance.
+
+        Used by legacy compatibility wrappers in common.py.
+        """
+        instance = cls.__new__(cls)
+        instance._driver = driver
+        instance._uri = ""
+        instance._user = ""
+        instance._password = ""
+        return instance
+
     @property
     def driver(self):
         """Expose the raw driver for legacy callers."""

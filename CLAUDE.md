@@ -68,7 +68,7 @@ run_pipeline(backend_type="cogdb", provider="local", dimension=384)
 
 ## Key Dependencies
 
-- Python 3.13+, Neo4j 5.0+, Flask 3.0+
+- Python 3.10+, Neo4j 5.0+, Flask 3.0+
 - neo4j (driver), sentence-transformers (local embeddings)
 - cogdb (optional embedded graph backend)
 - Isaacus kanon-2-embedder API (optional cloud embeddings)
