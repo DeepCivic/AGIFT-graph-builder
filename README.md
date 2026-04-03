@@ -1,6 +1,6 @@
 # AGIFT Graph
 
-Australian Government Interactive Functions Thesaurus (AGIFT) as a Neo4j knowledge graph with embeddings and dual edge types.
+Australian Government Interactive Functions Thesaurus (AGIFT) as a knowledge graph with embeddings and dual edge types.
 
 ## What it does
 
