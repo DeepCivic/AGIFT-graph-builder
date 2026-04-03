@@ -46,22 +46,25 @@ The CLI reads env vars with sensible defaults (`bolt://localhost:7687`, `neo4j`/
 
 ### Path C — CogDB (embedded, no server)
 
-[CogDB](https://github.com/arun1729/cog) is a persistent embedded graph database written in pure Python — no server process, no Docker, just a pip install. Good fit if the graph is small (AGIFT is ~500 terms) and you want zero infrastructure.
+[CogDB](https://github.com/arun1729/cog) is a persistent embedded graph database written in pure Python. No server process, no Docker — data is stored to local files.
 
 ```bash
-pip install cogdb
+pip install agift-graph[cogdb]
+agift --backend cogdb                # stores graph in ./agift_cogdb_data/
+agift --backend cogdb --cogdb-dir /path/to/data
 ```
 
-CogDB stores triples (`node → edge → node`) to local files. The AGIFT pipeline currently targets Neo4j, so using CogDB requires writing a thin adapter that maps `PARENT_OF`/`SIMILAR_TO` edges to CogDB's `put(source, edge, dest)` API. See the [CogDB README](https://github.com/arun1729/cog) for the query API.
+The pipeline runs identically to Neo4j — same fetch, embed, and semantic edge stages. CogDB terms, edges, and embeddings are stored as triples with JSON property blobs. Set `COGDB_DATA_DIR` as an environment variable or pass `--cogdb-dir` to control the storage location.
 
 ## Install extras
 
 | Install | What you get | Size |
 |---------|-------------|------|
 | `pip install agift-graph` | Neo4j driver + fetch + graph build | Lightweight |
+| `pip install agift-graph[cogdb]` | + CogDB embedded graph backend | Small |
 | `pip install agift-graph[embeddings]` | + sentence-transformers + torch | ~2 GB |
 | `pip install agift-graph[isaacus]` | + Isaacus API client | Small |
-| `pip install agift-graph[all]` | Everything | ~2 GB |
+| `pip install agift-graph[all]` | Everything (Neo4j + CogDB + embeddings + Isaacus) | ~2 GB |
 
 ## Embedding providers
 
@@ -77,16 +80,19 @@ The local provider uses `all-MiniLM-L6-v2` (384d) or `all-mpnet-base-v2` (768d).
 ```python
 from agift import run_pipeline
 
-# Run the full pipeline from Python code
+# Run the full pipeline with Neo4j (default)
 run_pipeline(provider="local", dimension=384)
 
-# Or with explicit Neo4j connection
+# Explicit Neo4j connection
 run_pipeline(
     neo4j_uri="bolt://localhost:7687",
     neo4j_user="neo4j",
     neo4j_password="changeme",
     skip_embed=True,
 )
+
+# Use CogDB instead of Neo4j
+run_pipeline(backend_type="cogdb", provider="local", dimension=384)
 ```
 
 ## Configuration
@@ -96,9 +102,10 @@ run_pipeline(
 | `NEO4J_URI` | `bolt://localhost:7687` | Neo4j connection URI |
 | `NEO4J_USER` | `neo4j` | Neo4j username |
 | `NEO4J_PASSWORD` | `changeme` | Neo4j password |
+| `COGDB_DATA_DIR` | `agift_cogdb_data` | CogDB storage directory |
 | `ISAACUS_API_KEY` | (empty) | Isaacus API key (optional) |
 
-All other settings (dimension, provider, similarity threshold, semantic edge weight) are configured via the dashboard UI and stored in Neo4j.
+All other settings (dimension, provider, similarity threshold, semantic edge weight) are configured via the dashboard UI and stored in the graph backend.
 
 ## Full Docker stack
 
@@ -122,6 +129,10 @@ Then open the dashboard at http://localhost:5050 and click "Full Pipeline" or "G
 ```bash
 # Full pipeline (fetch + graph + embed + semantic edges)
 agift
+
+# Use CogDB instead of Neo4j
+agift --backend cogdb
+agift --backend cogdb --cogdb-dir /path/to/data
 
 # Graph only (no embeddings)
 agift --skip-embed --skip-semantic
@@ -147,8 +158,11 @@ agift --dry-run
 ```
 agift/
 ├── __init__.py              # Public API exports
+├── backend.py               # GraphBackend abstract interface
+├── neo4j_backend.py         # Neo4j backend implementation
+├── cogdb_backend.py         # CogDB backend implementation
 ├── cli.py                   # CLI entry point + run_pipeline()
-├── common.py                # Constants, Neo4j helpers, logging
+├── common.py                # Constants, backend factory, summary
 ├── fetch.py                 # TemaTres API fetching
 ├── graph.py                 # Schema setup + node/edge upsert
 ├── embed.py                 # Embedding providers (local + Isaacus)
