@@ -16,20 +16,23 @@ AGIFT Graph Builder — a Neo4j-based knowledge graph that ingests the Australia
 
 ### Refactored: `import_agift.py` → `agift/` package
 - The original 952-line monolith has been split into the `agift/` package:
+  - `agift/cli.py` — CLI entry point + `run_pipeline()` programmatic API
   - `agift/common.py` — constants, Neo4j helpers, run logging, summary
   - `agift/fetch.py` — TemaTres API hierarchy fetching + alt-labels
   - `agift/graph.py` — schema setup + node/edge upsert
   - `agift/embed.py` — Isaacus + local sentence-transformer providers
   - `agift/link.py` — cosine similarity + semantic edge building
-  - `import_agift.py` — thin CLI entry point (imports from the package)
+  - `import_agift.py` — backward-compatible entry point (imports from the package)
 
 ## Architecture
 
 ```
-import_agift.py    — CLI entry point for the 4-stage ETL pipeline
-agift/             — pipeline package (common, fetch, graph, embed, link)
-dashboard/app.py   — Flask web UI for config, run control, and monitoring
-worker/            — Docker + cron for scheduled pipeline runs
+agift/cli.py         — CLI entry point (`agift` command) + run_pipeline() API
+agift/               — pipeline package (common, fetch, graph, embed, link)
+docker-compose.yml   — full stack: Neo4j + dashboard + worker
+dashboard/app.py     — Flask web UI for config, run control, and monitoring
+worker/              — Docker + cron for scheduled pipeline runs
+import_agift.py      — backward-compatible entry point
 ```
 
 **Data flow:** TemaTres REST API → Neo4j nodes/edges → embeddings → semantic similarity edges
@@ -37,17 +40,19 @@ worker/            — Docker + cron for scheduled pipeline runs
 ## Build & Run
 
 ```bash
-# Prerequisites: Neo4j running on bolt://localhost:7687
-# Set environment variables: NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD
+# Full Docker stack (Neo4j + dashboard + worker)
+docker compose up -d --build
 
-# Run the pipeline
-python import_agift.py
-python import_agift.py --dry-run
-python import_agift.py --skip-embed
-python import_agift.py --force-embed
+# Or standalone with existing Neo4j
+pip install agift-graph[all]
+agift
+agift --dry-run
+agift --skip-embed
+agift --force-embed
 
-# Dashboard
-cd dashboard && flask run --port 5050
+# Programmatic usage
+from agift import run_pipeline
+run_pipeline(provider="local", dimension=384)
 ```
 
 ## Key Dependencies
