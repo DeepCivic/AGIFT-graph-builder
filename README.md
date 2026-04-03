@@ -44,6 +44,16 @@ agift
 
 The CLI reads env vars with sensible defaults (`bolt://localhost:7687`, `neo4j`/`changeme`) that match the included `docker-compose.yml`.
 
+### Path C — CogDB (embedded, no server)
+
+[CogDB](https://github.com/arun1729/cog) is a persistent embedded graph database written in pure Python — no server process, no Docker, just a pip install. Good fit if the graph is small (AGIFT is ~500 terms) and you want zero infrastructure.
+
+```bash
+pip install cogdb
+```
+
+CogDB stores triples (`node → edge → node`) to local files. The AGIFT pipeline currently targets Neo4j, so using CogDB requires writing a thin adapter that maps `PARENT_OF`/`SIMILAR_TO` edges to CogDB's `put(source, edge, dest)` API. See the [CogDB README](https://github.com/arun1729/cog) for the query API.
+
 ## Install extras
 
 | Install | What you get | Size |
@@ -92,10 +102,10 @@ All other settings (dimension, provider, similarity threshold, semantic edge wei
 
 ## Full Docker stack
 
-For the full stack with dashboard and worker:
+The included `docker-compose.yml` runs Neo4j, the dashboard, and a cron worker:
 
 ```bash
-docker compose -f docker-compose.agift.yml up -d --build
+docker compose up -d --build
 ```
 
 Then open the dashboard at http://localhost:5050 and click "Full Pipeline" or "Graph Only".
@@ -105,6 +115,7 @@ Then open the dashboard at http://localhost:5050 and click "Full Pipeline" or "G
 | Neo4j Browser | 7474 | Graph database UI |
 | Neo4j Bolt | 7687 | Database protocol |
 | Dashboard | 5050 | Config, run controls, logs |
+| Worker | — | Cron-scheduled pipeline runs |
 
 ## CLI usage
 
