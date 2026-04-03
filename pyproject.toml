@@ -1,0 +1,81 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agift-graph"
+version = "0.1.0"
+description = "Australian Government Interactive Functions Thesaurus (AGIFT) as a Neo4j knowledge graph with embeddings and dual edge types"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "AGIFT Graph Team"},
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Database",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing :: Linguistic",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "neo4j>=5.0.0",
+]
+
+[project.optional-dependencies]
+local = ["sentence-transformers>=2.2.0"]
+isaacus = ["isaacus>=0.1.0"]
+all = [
+    "sentence-transformers>=2.2.0",
+    "isaacus>=0.1.0",
+]
+dev = [
+    "pytest>=7.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/DeepCivic/AGIFT-graph-builder"
+Repository = "https://github.com/DeepCivic/AGIFT-graph-builder"
+Issues = "https://github.com/DeepCivic/AGIFT-graph-builder/issues"
+
+[project.scripts]
+agift = "agift.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["agift*"]
+exclude = ["dashboard*", "worker*", "tests*"]
+
+[tool.setuptools.package-data]
+agift = ["*.py"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''

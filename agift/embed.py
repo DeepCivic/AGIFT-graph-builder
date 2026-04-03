@@ -65,7 +65,13 @@ def embed_terms(driver, term_ids: list[int], api_key: str, dimension: int) -> di
     Returns:
         Dict with embedded and failed counts.
     """
-    from isaacus import Isaacus
+    try:
+        from isaacus import Isaacus
+    except ImportError:
+        raise ImportError(
+            "The isaacus package is required for Isaacus embeddings.\n"
+            "Install it with: pip install agift-graph[isaacus]"
+        )
 
     client = Isaacus(api_key=api_key)
     stats = {"embedded": 0, "failed": 0}
@@ -134,7 +140,13 @@ def embed_terms_local(driver, term_ids: list[int], dimension: int) -> dict:
     Returns:
         Dict with embedded and failed counts.
     """
-    from sentence_transformers import SentenceTransformer
+    try:
+        from sentence_transformers import SentenceTransformer
+    except ImportError:
+        raise ImportError(
+            "The sentence-transformers package is required for local embeddings.\n"
+            "Install it with: pip install agift-graph[local]"
+        )
 
     model_name = LOCAL_MODELS.get(dimension)
     if not model_name:
