@@ -83,8 +83,7 @@ class TestBuildHierarchicalText:
 
     def test_l3_term(self, seeded_backend):
         text = build_hierarchical_text(seeded_backend, 3)
-        assert text == ("Environment > Water resources > "
-                        "Water quality monitoring")
+        assert text == ("Environment > Water resources > " "Water quality monitoring")
 
     def test_nonexistent_term_returns_empty(self, cogdb_backend):
         text = build_hierarchical_text(cogdb_backend, 999)

@@ -23,7 +23,6 @@ import time
 from datetime import datetime, timezone
 
 from agift.common import (
-    PROVIDER_ISAACUS,
     PROVIDER_LOCAL,
     TEMATRES_BASE,
     VALID_BACKENDS,
@@ -125,6 +124,7 @@ def run_pipeline(
     # For Neo4j, verify connectivity
     if backend_type == "neo4j":
         from agift.neo4j_backend import Neo4jBackend
+
         if isinstance(backend, Neo4jBackend):
             backend.driver.verify_connectivity()
 
@@ -136,11 +136,13 @@ def run_pipeline(
         print(f"  Created: {graph_stats['created']}")
         print(f"  Updated: {graph_stats['updated']}")
         print(f"  Unchanged: {graph_stats['unchanged']}")
-        run_details.update({
-            "created": graph_stats["created"],
-            "updated": graph_stats["updated"],
-            "unchanged": graph_stats["unchanged"],
-        })
+        run_details.update(
+            {
+                "created": graph_stats["created"],
+                "updated": graph_stats["updated"],
+                "unchanged": graph_stats["unchanged"],
+            }
+        )
 
         # Stage 3: Embed
         if skip_embed:
@@ -165,8 +167,10 @@ def run_pipeline(
                 run_details["embedded"] = 0
                 run_details["embed_failed"] = 0
             elif eff_provider == PROVIDER_LOCAL:
-                print(f"\nStage 3: Local embedding {len(embed_ids)} terms "
-                      f"(dimension={eff_dimension})...")
+                print(
+                    f"\nStage 3: Local embedding {len(embed_ids)} terms "
+                    f"(dimension={eff_dimension})..."
+                )
                 embed_stats = embed_terms_local(backend, embed_ids, eff_dimension)
                 print(f"  Embedded: {embed_stats['embedded']}")
                 print(f"  Failed:   {embed_stats['failed']}")
@@ -174,16 +178,17 @@ def run_pipeline(
                 run_details["embed_failed"] = embed_stats["failed"]
             else:
                 # Isaacus provider
-                api_key = (config["isaacus_api_key"]
-                           or os.environ.get("ISAACUS_API_KEY"))
+                api_key = config["isaacus_api_key"] or os.environ.get("ISAACUS_API_KEY")
                 if not api_key:
                     print("\nStage 3: Skipped (no Isaacus API key configured)")
                     print("  Set via dashboard, or use --provider local")
                     run_details["embedded"] = 0
                     run_details["embed_failed"] = 0
                 else:
-                    print(f"\nStage 3: Isaacus embedding {len(embed_ids)} terms "
-                          f"(dimension={eff_dimension})...")
+                    print(
+                        f"\nStage 3: Isaacus embedding {len(embed_ids)} terms "
+                        f"(dimension={eff_dimension})..."
+                    )
                     embed_stats = embed_terms(
                         backend, embed_ids, api_key, eff_dimension
                     )
@@ -201,8 +206,10 @@ def run_pipeline(
             eff_threshold = threshold or config["similarity_threshold"]
             sem_weight = config["semantic_edge_weight"]
 
-            print(f"\nStage 4: Building semantic edges "
-                  f"(threshold={eff_threshold}, weight={sem_weight})...")
+            print(
+                f"\nStage 4: Building semantic edges "
+                f"(threshold={eff_threshold}, weight={sem_weight})..."
+            )
             sem_stats = build_semantic_edges(backend, eff_threshold, sem_weight)
             print(f"  Created:            {sem_stats['created']}")
             print(f"  Skipped (structural): {sem_stats['skipped_structural']}")
@@ -232,27 +239,51 @@ def main():
     parser = argparse.ArgumentParser(
         description="Import AGIFT vocabulary into a graph with embeddings"
     )
-    parser.add_argument("--backend", choices=list(VALID_BACKENDS),
-                        default="neo4j",
-                        help="Graph backend: neo4j (default) or cogdb")
-    parser.add_argument("--cogdb-dir", default=None,
-                        help="CogDB data directory (default: agift_cogdb_data)")
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Fetch from API but don't write to graph")
-    parser.add_argument("--skip-alt", action="store_true",
-                        help="Skip fetching alt labels (faster)")
-    parser.add_argument("--skip-embed", action="store_true",
-                        help="Skip embedding generation")
-    parser.add_argument("--force-embed", action="store_true",
-                        help="Re-embed all terms, not just new/changed")
-    parser.add_argument("--skip-semantic", action="store_true",
-                        help="Skip semantic edge generation")
-    parser.add_argument("--provider", choices=list(VALID_PROVIDERS),
-                        help="Override embedding provider (isaacus or local)")
-    parser.add_argument("--dimension", type=int, choices=list(VALID_DIMENSIONS),
-                        help="Override embedding dimension")
-    parser.add_argument("--threshold", type=float, default=None,
-                        help="Cosine similarity threshold for semantic edges")
+    parser.add_argument(
+        "--backend",
+        choices=list(VALID_BACKENDS),
+        default="neo4j",
+        help="Graph backend: neo4j (default) or cogdb",
+    )
+    parser.add_argument(
+        "--cogdb-dir",
+        default=None,
+        help="CogDB data directory (default: agift_cogdb_data)",
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Fetch from API but don't write to graph"
+    )
+    parser.add_argument(
+        "--skip-alt", action="store_true", help="Skip fetching alt labels (faster)"
+    )
+    parser.add_argument(
+        "--skip-embed", action="store_true", help="Skip embedding generation"
+    )
+    parser.add_argument(
+        "--force-embed",
+        action="store_true",
+        help="Re-embed all terms, not just new/changed",
+    )
+    parser.add_argument(
+        "--skip-semantic", action="store_true", help="Skip semantic edge generation"
+    )
+    parser.add_argument(
+        "--provider",
+        choices=list(VALID_PROVIDERS),
+        help="Override embedding provider (isaacus or local)",
+    )
+    parser.add_argument(
+        "--dimension",
+        type=int,
+        choices=list(VALID_DIMENSIONS),
+        help="Override embedding dimension",
+    )
+    parser.add_argument(
+        "--threshold",
+        type=float,
+        default=None,
+        help="Cosine similarity threshold for semantic edges",
+    )
     args = parser.parse_args()
 
     try:

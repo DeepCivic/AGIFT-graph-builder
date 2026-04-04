@@ -66,7 +66,7 @@ def embed_terms(
     batch_size = 50
 
     for i in range(0, len(term_ids), batch_size):
-        batch_ids = term_ids[i:i + batch_size]
+        batch_ids = term_ids[i : i + batch_size]
         texts = []
         valid_ids = []
 
@@ -132,8 +132,10 @@ def embed_terms_local(
 
     model_name = LOCAL_MODELS.get(dimension)
     if not model_name:
-        print(f"  ERROR: No local model for dimension {dimension}. "
-              f"Use one of: {list(LOCAL_MODELS.keys())}")
+        print(
+            f"  ERROR: No local model for dimension {dimension}. "
+            f"Use one of: {list(LOCAL_MODELS.keys())}"
+        )
         return {"embedded": 0, "failed": len(term_ids)}
 
     cache_dir = os.environ.get("TRANSFORMERS_CACHE", None)
@@ -144,7 +146,7 @@ def embed_terms_local(
     batch_size = 64
 
     for i in range(0, len(term_ids), batch_size):
-        batch_ids = term_ids[i:i + batch_size]
+        batch_ids = term_ids[i : i + batch_size]
         texts = []
         valid_ids = []
 
@@ -161,9 +163,7 @@ def embed_terms_local(
             embeddings = model.encode(texts, show_progress_bar=False)
 
             for j, vec in enumerate(embeddings):
-                backend.store_embedding(
-                    valid_ids[j], vec.tolist(), dimension, "local"
-                )
+                backend.store_embedding(valid_ids[j], vec.tolist(), dimension, "local")
                 stats["embedded"] += 1
 
             print(f"  Embedded batch {i // batch_size + 1}: {len(texts)} terms")

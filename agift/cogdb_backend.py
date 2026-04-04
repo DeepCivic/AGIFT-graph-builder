@@ -113,8 +113,9 @@ class CogDBBackend(GraphBackend):
 
     # -- Nodes ----------------------------------------------------------------
 
-    def upsert_term(self, term_id, label, label_norm, depth, dcat_theme,
-                    top_level_id, alt_labels):
+    def upsert_term(
+        self, term_id, label, label_norm, depth, dcat_theme, top_level_id, alt_labels
+    ):
         existing = self._get_props(term_id)
         no_embed = True
         changed = True
@@ -126,15 +127,17 @@ class CogDBBackend(GraphBackend):
                 or existing.get("alt_labels") != alt_labels
             )
             props = existing.copy()
-            props.update({
-                "term_id": term_id,
-                "label": label,
-                "label_norm": label_norm,
-                "depth": depth,
-                "dcat_theme": dcat_theme,
-                "top_level_id": top_level_id,
-                "alt_labels": alt_labels,
-            })
+            props.update(
+                {
+                    "term_id": term_id,
+                    "label": label,
+                    "label_norm": label_norm,
+                    "depth": depth,
+                    "dcat_theme": dcat_theme,
+                    "top_level_id": top_level_id,
+                    "alt_labels": alt_labels,
+                }
+            )
         else:
             props = {
                 "term_id": term_id,
@@ -205,11 +208,13 @@ class CogDBBackend(GraphBackend):
         for tid in self._all_term_ids():
             props = self._get_props(tid)
             if props and props.get("embedding") is not None:
-                results.append((
-                    tid,
-                    props["embedding"],
-                    props.get("embedding_dimension", 0),
-                ))
+                results.append(
+                    (
+                        tid,
+                        props["embedding"],
+                        props.get("embedding_dimension", 0),
+                    )
+                )
         results.sort(key=lambda x: x[0])
         return results
 
@@ -238,12 +243,14 @@ class CogDBBackend(GraphBackend):
     def create_semantic_edge(self, a_id, b_id, score, weight):
         self._graph.put(_term_key(a_id), _SIMILAR_TO, _term_key(b_id))
         edge_key = f"sim:{a_id}:{b_id}"
-        meta = json.dumps({
-            "score": round(score, 4),
-            "weight": weight,
-            "edge_type": "semantic",
-            "created_at": datetime.now(timezone.utc).isoformat(),
-        })
+        meta = json.dumps(
+            {
+                "score": round(score, 4),
+                "weight": weight,
+                "edge_type": "semantic",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }
+        )
         self._graph.put(edge_key, "json", meta)
         self._graph.put("registry:sim_edges", "contains", edge_key)
 
@@ -264,37 +271,48 @@ class CogDBBackend(GraphBackend):
             "semantic_edge_weight": SEMANTIC_EDGE_WEIGHT,
         }
 
-    def save_config(self, api_key, embedding_dimension, embedding_provider,
-                    similarity_threshold, semantic_edge_weight):
+    def save_config(
+        self,
+        api_key,
+        embedding_dimension,
+        embedding_provider,
+        similarity_threshold,
+        semantic_edge_weight,
+    ):
         # Remove old config blob(s)
         for old in self._out("config:agift", "json"):
             self._graph.delete("config:agift", "json", old)
-        blob = json.dumps({
-            "isaacus_api_key": api_key,
-            "embedding_dimension": embedding_dimension,
-            "embedding_provider": embedding_provider,
-            "similarity_threshold": similarity_threshold,
-            "semantic_edge_weight": semantic_edge_weight,
-        })
+        blob = json.dumps(
+            {
+                "isaacus_api_key": api_key,
+                "embedding_dimension": embedding_dimension,
+                "embedding_provider": embedding_provider,
+                "similarity_threshold": similarity_threshold,
+                "semantic_edge_weight": semantic_edge_weight,
+            }
+        )
         self._graph.put("config:agift", "json", blob)
 
     def log_run(self, status, details):
         ts = datetime.now(timezone.utc).isoformat()
-        entry = json.dumps({
-            "worker": "agift",
-            "status": status,
-            "started_at": details.get("started_at", ts),
-            "finished_at": ts,
-            "terms_fetched": details.get("fetched", 0),
-            "terms_created": details.get("created", 0),
-            "terms_updated": details.get("updated", 0),
-            "terms_unchanged": details.get("unchanged", 0),
-            "terms_embedded": details.get("embedded", 0),
-            "terms_embed_failed": details.get("embed_failed", 0),
-            "semantic_edges_created": details.get("semantic_edges_created", 0),
-            "embedding_provider": details.get("embedding_provider", ""),
-            "error_message": details.get("error", ""),
-        }, default=str)
+        entry = json.dumps(
+            {
+                "worker": "agift",
+                "status": status,
+                "started_at": details.get("started_at", ts),
+                "finished_at": ts,
+                "terms_fetched": details.get("fetched", 0),
+                "terms_created": details.get("created", 0),
+                "terms_updated": details.get("updated", 0),
+                "terms_unchanged": details.get("unchanged", 0),
+                "terms_embedded": details.get("embedded", 0),
+                "terms_embed_failed": details.get("embed_failed", 0),
+                "semantic_edges_created": details.get("semantic_edges_created", 0),
+                "embedding_provider": details.get("embedding_provider", ""),
+                "error_message": details.get("error", ""),
+            },
+            default=str,
+        )
         log_key = f"runlog:{ts}"
         self._graph.put(log_key, "json", entry)
         self._graph.put("registry:runlogs", "contains", log_key)

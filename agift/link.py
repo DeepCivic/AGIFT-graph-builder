@@ -63,8 +63,7 @@ def build_semantic_edges(
     backend.delete_all_semantic_edges()
 
     for dim, dim_terms in by_dim.items():
-        print(f"  Computing similarities for {len(dim_terms)} terms "
-              f"(dim={dim})...")
+        print(f"  Computing similarities for {len(dim_terms)} terms " f"(dim={dim})...")
         pairs_to_create = []
 
         for i in range(len(dim_terms)):
