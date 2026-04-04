@@ -87,6 +87,16 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Update Docker Hub description
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ matrix.image }}
+          short-description: |
+            ${{ matrix.image == 'deepcivic/agift-dashboard' && 'AGIFT Dashboard - Web interface for AGIFT knowledge graph' || 'AGIFT Worker - Background processor for AGIFT graph embeddings' }}
+          readme-filepath: ./dockerhub-description.md
+
   github-release:
     needs: [publish-pypi, publish-docker]
     runs-on: ubuntu-latest
