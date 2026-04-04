@@ -115,7 +115,9 @@ def update_config():
         return redirect(url_for("index"))
 
     if provider == "local" and dim not in LOCAL_ONLY_DIMENSIONS:
-        flash(f"Local provider only supports dimensions {LOCAL_ONLY_DIMENSIONS}.", "error")
+        flash(
+            f"Local provider only supports dimensions {LOCAL_ONLY_DIMENSIONS}.", "error"
+        )
         return redirect(url_for("index"))
 
     try:
@@ -203,7 +205,8 @@ def _exec_worker(args: list[str]) -> None:
     backend_args = ["--backend", BACKEND_TYPE] if BACKEND_TYPE != "neo4j" else []
     cmd = (
         [DOCKER_BIN, "exec", WORKER_CONTAINER, "python", "-u", "import_agift.py"]
-        + backend_args + args
+        + backend_args
+        + args
     )
     _run_state["command"] = " ".join(cmd)
     _run_state["output"] = ""
@@ -259,11 +262,13 @@ def trigger_run():
 def run_status():
     """Return current run status as JSON (polled by the UI)."""
     with _run_lock:
-        return jsonify({
-            "running": _run_state["running"],
-            "command": _run_state["command"],
-            "output": _run_state["output"],
-        })
+        return jsonify(
+            {
+                "running": _run_state["running"],
+                "command": _run_state["command"],
+                "output": _run_state["output"],
+            }
+        )
 
 
 if __name__ == "__main__":

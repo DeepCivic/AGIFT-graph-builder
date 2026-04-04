@@ -20,10 +20,10 @@ jobs:
         run: pip install ".[dev,cogdb]"
 
       - name: Check formatting (black)
-        run: black --check agift/ tests/
+        run: black --check agift/ tests/ dashboard/ import_agift.py
 
       - name: Lint (flake8)
-        run: flake8 agift/ tests/
+        run: flake8 agift/ tests/ dashboard/ import_agift.py
 
   test:
     runs-on: ubuntu-latest
