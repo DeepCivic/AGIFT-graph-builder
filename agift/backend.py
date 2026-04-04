@@ -99,8 +99,23 @@ class GraphBackend(ABC):
         """
 
     @abstractmethod
+    def save_config(
+        self,
+        api_key: str,
+        embedding_dimension: int,
+        embedding_provider: str,
+        similarity_threshold: float,
+        semantic_edge_weight: float,
+    ) -> None:
+        """Persist pipeline configuration."""
+
+    @abstractmethod
     def log_run(self, status: str, details: dict) -> None:
         """Write a run-log entry."""
+
+    @abstractmethod
+    def get_run_logs(self, worker: str, limit: int = 5) -> list[dict]:
+        """Return recent run logs for *worker*, newest first."""
 
     @abstractmethod
     def get_all_term_ids(self) -> list[int]:
