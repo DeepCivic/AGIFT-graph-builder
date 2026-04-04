@@ -1,9 +1,5 @@
 """Tests for the CogDB backend implementation."""
 
-import json
-
-from agift.cogdb_backend import CogDBBackend
-
 
 class TestUpsertTerm:
     def test_new_term_returns_changed_and_no_embed(self, cogdb_backend):
@@ -80,8 +76,7 @@ class TestHierarchyPath:
 
     def test_l3_term_has_three_labels(self, seeded_backend):
         chain, alts = seeded_backend.get_hierarchy_path(3)
-        assert chain == ["Environment", "Water resources",
-                         "Water quality monitoring"]
+        assert chain == ["Environment", "Water resources", "Water quality monitoring"]
 
     def test_nonexistent_term(self, cogdb_backend):
         chain, alts = cogdb_backend.get_hierarchy_path(999)
@@ -188,22 +183,31 @@ class TestConfig:
 
 class TestLogRun:
     def test_log_run_does_not_raise(self, cogdb_backend):
-        cogdb_backend.log_run("success", {
-            "started_at": "2025-01-01T00:00:00",
-            "fetched": 10,
-            "created": 5,
-        })
+        cogdb_backend.log_run(
+            "success",
+            {
+                "started_at": "2025-01-01T00:00:00",
+                "fetched": 10,
+                "created": 5,
+            },
+        )
 
     def test_get_run_logs_returns_logged_entries(self, cogdb_backend):
-        cogdb_backend.log_run("success", {
-            "started_at": "2025-01-01T00:00:00",
-            "fetched": 10,
-            "created": 5,
-        })
-        cogdb_backend.log_run("error", {
-            "started_at": "2025-01-02T00:00:00",
-            "error": "connection refused",
-        })
+        cogdb_backend.log_run(
+            "success",
+            {
+                "started_at": "2025-01-01T00:00:00",
+                "fetched": 10,
+                "created": 5,
+            },
+        )
+        cogdb_backend.log_run(
+            "error",
+            {
+                "started_at": "2025-01-02T00:00:00",
+                "error": "connection refused",
+            },
+        )
         logs = cogdb_backend.get_run_logs("agift", limit=5)
         assert len(logs) == 2
         # Newest first
@@ -212,10 +216,13 @@ class TestLogRun:
 
     def test_get_run_logs_respects_limit(self, cogdb_backend):
         for i in range(5):
-            cogdb_backend.log_run("success", {
-                "started_at": f"2025-01-0{i+1}T00:00:00",
-                "fetched": i,
-            })
+            cogdb_backend.log_run(
+                "success",
+                {
+                    "started_at": f"2025-01-0{i+1}T00:00:00",
+                    "fetched": i,
+                },
+            )
         logs = cogdb_backend.get_run_logs("agift", limit=2)
         assert len(logs) == 2
 
@@ -226,17 +233,20 @@ class TestLogRun:
 
     def test_log_run_field_names_match_template(self, cogdb_backend):
         """Run log entries should use terms_fetched, terms_created, etc."""
-        cogdb_backend.log_run("success", {
-            "started_at": "2025-01-01T00:00:00",
-            "fetched": 100,
-            "created": 50,
-            "updated": 10,
-            "unchanged": 40,
-            "embedded": 50,
-            "embed_failed": 0,
-            "semantic_edges_created": 25,
-            "embedding_provider": "local",
-        })
+        cogdb_backend.log_run(
+            "success",
+            {
+                "started_at": "2025-01-01T00:00:00",
+                "fetched": 100,
+                "created": 50,
+                "updated": 10,
+                "unchanged": 40,
+                "embedded": 50,
+                "embed_failed": 0,
+                "semantic_edges_created": 25,
+                "embedding_provider": "local",
+            },
+        )
         logs = cogdb_backend.get_run_logs("agift", limit=1)
         log = logs[0]
         assert log["terms_fetched"] == 100

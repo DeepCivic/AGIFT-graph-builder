@@ -9,7 +9,6 @@ from agift.backend import GraphBackend
 from agift.common import (
     DEFAULT_EMBEDDING_DIMENSION,
     DEFAULT_EMBEDDING_PROVIDER,
-    PROVIDER_ISAACUS,
     SEMANTIC_EDGE_WEIGHT,
     SIMILARITY_THRESHOLD,
 )
@@ -58,19 +57,18 @@ class Neo4jBackend(GraphBackend):
                 "FOR (t:Term) REQUIRE t.term_id IS UNIQUE"
             )
             session.run(
-                "CREATE INDEX term_dcat IF NOT EXISTS "
-                "FOR (t:Term) ON (t.dcat_theme)"
+                "CREATE INDEX term_dcat IF NOT EXISTS " "FOR (t:Term) ON (t.dcat_theme)"
             )
             session.run(
-                "CREATE INDEX term_depth IF NOT EXISTS "
-                "FOR (t:Term) ON (t.depth)"
+                "CREATE INDEX term_depth IF NOT EXISTS " "FOR (t:Term) ON (t.depth)"
             )
         print("Neo4j schema ensured.")
 
     # -- Nodes ----------------------------------------------------------------
 
-    def upsert_term(self, term_id, label, label_norm, depth, dcat_theme,
-                    top_level_id, alt_labels):
+    def upsert_term(
+        self, term_id, label, label_norm, depth, dcat_theme, top_level_id, alt_labels
+    ):
         with self._driver.session() as session:
             result = session.run(
                 """
@@ -171,28 +169,23 @@ class Neo4jBackend(GraphBackend):
 
     def get_all_embedded_terms(self):
         with self._driver.session() as session:
-            result = session.run(
-                """
+            result = session.run("""
                 MATCH (t:Term)
                 WHERE t.embedding IS NOT NULL
                 RETURN t.term_id AS tid, t.embedding AS emb,
                        t.embedding_dimension AS dim
                 ORDER BY t.term_id
-                """
-            )
+                """)
             return [(r["tid"], r["emb"], r["dim"]) for r in result]
 
     def get_structural_pairs(self):
         with self._driver.session() as session:
-            result = session.run(
-                """
+            result = session.run("""
                 MATCH (a:Term)-[:PARENT_OF]->(b:Term)
                 RETURN a.term_id AS a_id, b.term_id AS b_id
-                """
-            )
+                """)
             return {
-                (min(r["a_id"], r["b_id"]), max(r["a_id"], r["b_id"]))
-                for r in result
+                (min(r["a_id"], r["b_id"]), max(r["a_id"], r["b_id"])) for r in result
             }
 
     def delete_all_semantic_edges(self):
@@ -235,7 +228,8 @@ class Neo4jBackend(GraphBackend):
                 return {
                     "isaacus_api_key": record["key"],
                     "embedding_dimension": record["dim"] or DEFAULT_EMBEDDING_DIMENSION,
-                    "embedding_provider": record["provider"] or DEFAULT_EMBEDDING_PROVIDER,
+                    "embedding_provider": record["provider"]
+                    or DEFAULT_EMBEDDING_PROVIDER,
                     "similarity_threshold": (
                         record["sim_thresh"] or SIMILARITY_THRESHOLD
                     ),
@@ -251,8 +245,14 @@ class Neo4jBackend(GraphBackend):
             "semantic_edge_weight": SEMANTIC_EDGE_WEIGHT,
         }
 
-    def save_config(self, api_key, embedding_dimension, embedding_provider,
-                    similarity_threshold, semantic_edge_weight):
+    def save_config(
+        self,
+        api_key,
+        embedding_dimension,
+        embedding_provider,
+        similarity_threshold,
+        semantic_edge_weight,
+    ):
         with self._driver.session() as session:
             session.run(
                 """
@@ -305,14 +305,12 @@ class Neo4jBackend(GraphBackend):
                 sem_created=details.get("semantic_edges_created", 0),
                 error=details.get("error", ""),
             )
-            session.run(
-                """
+            session.run("""
                 MATCH (r:RunLog {worker: 'agift'})
                 WITH r ORDER BY r.finished_at DESC
                 SKIP 20
                 DELETE r
-                """
-            )
+                """)
 
     def get_run_logs(self, worker, limit=5):
         with self._driver.session() as session:
@@ -337,9 +335,9 @@ class Neo4jBackend(GraphBackend):
 
     def get_summary_stats(self):
         with self._driver.session() as session:
-            total = session.run(
-                "MATCH (t:Term) RETURN count(t) AS total"
-            ).single()["total"]
+            total = session.run("MATCH (t:Term) RETURN count(t) AS total").single()[
+                "total"
+            ]
 
             embedded = session.run(
                 "MATCH (t:Term) WHERE t.embedding IS NOT NULL "

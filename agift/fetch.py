@@ -12,6 +12,7 @@ from agift.common import AGIFT_TOP_TO_DCAT, TEMATRES_BASE
 @dataclass
 class AgiftTerm:
     """A single AGIFT vocabulary term."""
+
     term_id: int
     label: str
     parent_id: int | None
@@ -85,11 +86,17 @@ def fetch_full_hierarchy(include_alts: bool = True) -> list[AgiftTerm]:
             dcat = "GOVE"
 
         alt_labels = _fetch_alt_labels(top_id) if include_alts else []
-        all_terms.append(AgiftTerm(
-            term_id=top_id, label=top_label, parent_id=None,
-            top_level_id=top_id, depth=1, dcat_theme=dcat,
-            alt_labels=alt_labels,
-        ))
+        all_terms.append(
+            AgiftTerm(
+                term_id=top_id,
+                label=top_label,
+                parent_id=None,
+                top_level_id=top_id,
+                depth=1,
+                dcat_theme=dcat,
+                alt_labels=alt_labels,
+            )
+        )
 
         # Level 2
         l2_root = _fetch_xml("fetchDown", str(top_id))
@@ -98,11 +105,17 @@ def fetch_full_hierarchy(include_alts: bool = True) -> list[AgiftTerm]:
 
         for l2_id, l2_label in l2_terms:
             alt_labels = _fetch_alt_labels(l2_id) if include_alts else []
-            all_terms.append(AgiftTerm(
-                term_id=l2_id, label=l2_label, parent_id=top_id,
-                top_level_id=top_id, depth=2, dcat_theme=dcat,
-                alt_labels=alt_labels,
-            ))
+            all_terms.append(
+                AgiftTerm(
+                    term_id=l2_id,
+                    label=l2_label,
+                    parent_id=top_id,
+                    top_level_id=top_id,
+                    depth=2,
+                    dcat_theme=dcat,
+                    alt_labels=alt_labels,
+                )
+            )
 
             # Level 3
             l3_root = _fetch_xml("fetchDown", str(l2_id))
@@ -110,11 +123,17 @@ def fetch_full_hierarchy(include_alts: bool = True) -> list[AgiftTerm]:
 
             for l3_id, l3_label in l3_terms:
                 alt_labels = _fetch_alt_labels(l3_id) if include_alts else []
-                all_terms.append(AgiftTerm(
-                    term_id=l3_id, label=l3_label, parent_id=l2_id,
-                    top_level_id=top_id, depth=3, dcat_theme=dcat,
-                    alt_labels=alt_labels,
-                ))
+                all_terms.append(
+                    AgiftTerm(
+                        term_id=l3_id,
+                        label=l3_label,
+                        parent_id=l2_id,
+                        top_level_id=top_id,
+                        depth=3,
+                        dcat_theme=dcat,
+                        alt_labels=alt_labels,
+                    )
+                )
 
         # Be polite to the API
         time.sleep(2)

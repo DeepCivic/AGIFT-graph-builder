@@ -4,7 +4,6 @@ import os
 
 from agift.backend import GraphBackend
 
-
 # ---------------------------------------------------------------------------
 # AGIFT top-level function → DCAT-AP theme mapping
 # ---------------------------------------------------------------------------
@@ -68,6 +67,7 @@ VALID_BACKENDS = ("neo4j", "cogdb")
 # Backend factory
 # ---------------------------------------------------------------------------
 
+
 def create_backend(
     backend_type: str = "neo4j",
     *,
@@ -93,9 +93,11 @@ def create_backend(
     """
     if backend_type == "neo4j":
         from agift.neo4j_backend import Neo4jBackend
+
         return Neo4jBackend(uri=neo4j_uri, user=neo4j_user, password=neo4j_password)
     elif backend_type == "cogdb":
         from agift.cogdb_backend import CogDBBackend
+
         return CogDBBackend(data_dir=cogdb_data_dir)
     else:
         raise ValueError(
@@ -108,6 +110,7 @@ def create_backend(
 # Legacy helpers (thin wrappers kept for backward compatibility)
 # ---------------------------------------------------------------------------
 
+
 def get_neo4j_driver():
     """Create a Neo4j driver from environment variables.
 
@@ -115,6 +118,7 @@ def get_neo4j_driver():
     New code should use :func:`create_backend` instead.
     """
     from neo4j import GraphDatabase
+
     uri = os.environ.get("NEO4J_URI", "bolt://localhost:7687")
     user = os.environ.get("NEO4J_USER", "neo4j")
     password = os.environ.get("NEO4J_PASSWORD", "changeme")
@@ -128,6 +132,7 @@ def get_config_from_neo4j(driver) -> dict:
     Pipeline code should use ``backend.get_config()`` instead.
     """
     from agift.neo4j_backend import Neo4jBackend
+
     return Neo4jBackend.from_driver(driver).get_config()
 
 
@@ -138,6 +143,7 @@ def log_run(driver, status: str, details: dict) -> None:
     Pipeline code should use ``backend.log_run()`` instead.
     """
     from agift.neo4j_backend import Neo4jBackend
+
     Neo4jBackend.from_driver(driver).log_run(status, details)
 
 
@@ -145,20 +151,19 @@ def log_run(driver, status: str, details: dict) -> None:
 # Summary output
 # ---------------------------------------------------------------------------
 
+
 def print_summary(backend: GraphBackend) -> None:
     """Print a summary of the graph state."""
     stats = backend.get_summary_stats()
 
-    print(f"\n=== AGIFT Graph Summary ===")
+    print("\n=== AGIFT Graph Summary ===")
     print(f"Total terms:       {stats['total']}")
     print(f"Embedded:          {stats['embedded']}")
-    print(f"Structural edges:  {stats['structural_edges']} "
-          f"(PARENT_OF, weight=1.0)")
-    print(f"Semantic edges:    {stats['semantic_edges']} "
-          f"(SIMILAR_TO, weight=0.5)")
-    print(f"\nBy depth:")
+    print(f"Structural edges:  {stats['structural_edges']} " f"(PARENT_OF, weight=1.0)")
+    print(f"Semantic edges:    {stats['semantic_edges']} " f"(SIMILAR_TO, weight=0.5)")
+    print("\nBy depth:")
     for depth, cnt in stats["by_depth"]:
         print(f"  L{depth}: {cnt}")
-    print(f"\nBy DCAT-AP theme:")
+    print("\nBy DCAT-AP theme:")
     for theme, cnt in stats["by_theme"]:
         print(f"  {theme}: {cnt}")
