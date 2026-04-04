@@ -128,3 +128,15 @@ The pipeline is designed for Docker. Three containers run the system: Neo4j for 
 ---
 
 *Last updated: April 2026*
+
+## Release process
+
+The project uses a tag-based release workflow that publishes to PyPI and Docker Hub simultaneously. The changelog is the single source of truth for release notes — commit messages are not exposed publicly.
+
+1. **Update CHANGELOG.md** with a new version entry
+2. **Run `./release.sh 0.2.0`** — updates pyproject.toml, commits, tags
+3. **Push tags** — triggers GitHub Actions workflow
+
+The workflow builds and publishes the Python package to PyPI, builds and pushes Docker images (`deepcivic/agift-dashboard`, `deepcivic/agift-worker`), and creates a GitHub Release with the changelog entry.
+
+Docker images are tagged with the semantic version (`0.2.0`), major.minor (`0.2`), and `latest`.

@@ -176,6 +176,8 @@ worker/
 ├── entrypoint.sh            # Cron scheduler + manual trigger
 import_agift.py              # Backward-compatible entry point
 pyproject.toml
+CHANGELOG.md                 # Version history (release notes source)
+release.sh                   # Version bump + tag helper
 LICENSE                      # Apache 2.0
 ```
 
@@ -186,3 +188,24 @@ AGIFT is maintained by the National Archives of Australia and published via Tema
 ## License
 
 Apache 2.0 — see [LICENSE](LICENSE).
+
+## Publishing
+
+This project uses a tag-based release workflow:
+
+1. Update `CHANGELOG.md` with a new version entry
+2. Run `./release.sh 0.2.0` (replaces version in `pyproject.toml`, commits, tags)
+3. Push: `git push origin main --tags`
+
+The GitHub Actions workflow will:
+- Build and publish to PyPI
+- Build and push Docker images to Docker Hub (`deepcivic/agift-dashboard`, `deepcivic/agift-worker`)
+- Create a GitHub Release with the changelog entry
+
+Secrets required in GitHub repo settings:
+- `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (repo-level secrets)
+- PyPI trusted publishing is configured via OIDC (no secret needed)
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for version history.
