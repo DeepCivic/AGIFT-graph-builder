@@ -3,6 +3,8 @@
 from agift.backend import GraphBackend
 from agift.common import (
     AGIFT_TOP_TO_DCAT,
+    DEFAULT_EMBEDDING_DIMENSION,
+    DEFAULT_EMBEDDING_PROVIDER,
     LOCAL_MODELS,
     PROVIDER_ISAACUS,
     PROVIDER_LOCAL,
@@ -28,6 +30,8 @@ from agift.cli import run_pipeline
 __all__ = [
     "AGIFT_TOP_TO_DCAT",
     "AgiftTerm",
+    "DEFAULT_EMBEDDING_DIMENSION",
+    "DEFAULT_EMBEDDING_PROVIDER",
     "GraphBackend",
     "LOCAL_MODELS",
     "PROVIDER_ISAACUS",

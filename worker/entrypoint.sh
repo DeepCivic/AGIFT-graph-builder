@@ -7,7 +7,7 @@ echo "Started: $(date)"
 
 # Dump runtime env vars into a file cron jobs can source.
 # Values are quoted so connection strings with special chars survive sourcing.
-env | grep -E '^(NEO4J_|ISAACUS_|PYTHONPATH|PATH|HOME|LANG)' | sed 's/=\(.*\)/="\1"/' > /app/.env.cron
+env | grep -E '^(NEO4J_|ISAACUS_|COGDB_|BACKEND_TYPE|PYTHONPATH|PATH|HOME|LANG)' | sed 's/=\(.*\)/="\1"/' > /app/.env.cron
 echo 'PYTHONPATH="/app"' >> /app/.env.cron
 
 # Install the cron schedule
@@ -25,8 +25,12 @@ set -a
 source /app/.env.cron
 set +a
 cd /app
+BACKEND_ARGS=""
+if [ -n "$BACKEND_TYPE" ] && [ "$BACKEND_TYPE" != "neo4j" ]; then
+  BACKEND_ARGS="--backend $BACKEND_TYPE"
+fi
 echo "=== AGIFT refresh started: $(date) ==="
-python import_agift.py
+python import_agift.py $BACKEND_ARGS
 echo "=== AGIFT refresh finished: $(date) ==="
 SCRIPT
 chmod +x /app/run_agift_refresh.sh

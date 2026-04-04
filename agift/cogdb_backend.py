@@ -14,7 +14,8 @@ from pathlib import Path
 
 from agift.backend import GraphBackend
 from agift.common import (
-    PROVIDER_ISAACUS,
+    DEFAULT_EMBEDDING_DIMENSION,
+    DEFAULT_EMBEDDING_PROVIDER,
     SEMANTIC_EDGE_WEIGHT,
     SIMILARITY_THRESHOLD,
 )
@@ -257,11 +258,25 @@ class CogDBBackend(GraphBackend):
                 pass
         return {
             "isaacus_api_key": None,
-            "embedding_dimension": 512,
-            "embedding_provider": PROVIDER_ISAACUS,
+            "embedding_dimension": DEFAULT_EMBEDDING_DIMENSION,
+            "embedding_provider": DEFAULT_EMBEDDING_PROVIDER,
             "similarity_threshold": SIMILARITY_THRESHOLD,
             "semantic_edge_weight": SEMANTIC_EDGE_WEIGHT,
         }
+
+    def save_config(self, api_key, embedding_dimension, embedding_provider,
+                    similarity_threshold, semantic_edge_weight):
+        # Remove old config blob(s)
+        for old in self._out("config:agift", "json"):
+            self._graph.delete("config:agift", "json", old)
+        blob = json.dumps({
+            "isaacus_api_key": api_key,
+            "embedding_dimension": embedding_dimension,
+            "embedding_provider": embedding_provider,
+            "similarity_threshold": similarity_threshold,
+            "semantic_edge_weight": semantic_edge_weight,
+        })
+        self._graph.put("config:agift", "json", blob)
 
     def log_run(self, status, details):
         ts = datetime.now(timezone.utc).isoformat()
@@ -270,16 +285,34 @@ class CogDBBackend(GraphBackend):
             "status": status,
             "started_at": details.get("started_at", ts),
             "finished_at": ts,
-            **{k: details.get(k, 0) for k in [
-                "fetched", "created", "updated", "unchanged",
-                "embedded", "embed_failed", "semantic_edges_created",
-            ]},
+            "terms_fetched": details.get("fetched", 0),
+            "terms_created": details.get("created", 0),
+            "terms_updated": details.get("updated", 0),
+            "terms_unchanged": details.get("unchanged", 0),
+            "terms_embedded": details.get("embedded", 0),
+            "terms_embed_failed": details.get("embed_failed", 0),
+            "semantic_edges_created": details.get("semantic_edges_created", 0),
             "embedding_provider": details.get("embedding_provider", ""),
             "error_message": details.get("error", ""),
         }, default=str)
         log_key = f"runlog:{ts}"
         self._graph.put(log_key, "json", entry)
         self._graph.put("registry:runlogs", "contains", log_key)
+
+    def get_run_logs(self, worker, limit=5):
+        log_keys = self._out("registry:runlogs", "contains")
+        logs = []
+        for key in log_keys:
+            blobs = self._out(key, "json")
+            for blob in blobs:
+                try:
+                    entry = json.loads(blob)
+                except (json.JSONDecodeError, TypeError):
+                    continue
+                if entry.get("worker") == worker:
+                    logs.append(entry)
+        logs.sort(key=lambda x: x.get("finished_at", ""), reverse=True)
+        return logs[:limit]
 
     def get_all_term_ids(self):
         return self._all_term_ids()

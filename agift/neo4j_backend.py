@@ -7,6 +7,8 @@ from neo4j import GraphDatabase
 
 from agift.backend import GraphBackend
 from agift.common import (
+    DEFAULT_EMBEDDING_DIMENSION,
+    DEFAULT_EMBEDDING_PROVIDER,
     PROVIDER_ISAACUS,
     SEMANTIC_EDGE_WEIGHT,
     SIMILARITY_THRESHOLD,
@@ -184,7 +186,7 @@ class Neo4jBackend(GraphBackend):
         with self._driver.session() as session:
             result = session.run(
                 """
-                MATCH (a:Term)-[:PARENT_OF]-(b:Term)
+                MATCH (a:Term)-[:PARENT_OF]->(b:Term)
                 RETURN a.term_id AS a_id, b.term_id AS b_id
                 """
             )
@@ -232,8 +234,8 @@ class Neo4jBackend(GraphBackend):
             if record:
                 return {
                     "isaacus_api_key": record["key"],
-                    "embedding_dimension": record["dim"] or 512,
-                    "embedding_provider": record["provider"] or PROVIDER_ISAACUS,
+                    "embedding_dimension": record["dim"] or DEFAULT_EMBEDDING_DIMENSION,
+                    "embedding_provider": record["provider"] or DEFAULT_EMBEDDING_PROVIDER,
                     "similarity_threshold": (
                         record["sim_thresh"] or SIMILARITY_THRESHOLD
                     ),
@@ -243,11 +245,31 @@ class Neo4jBackend(GraphBackend):
                 }
         return {
             "isaacus_api_key": None,
-            "embedding_dimension": 512,
-            "embedding_provider": PROVIDER_ISAACUS,
+            "embedding_dimension": DEFAULT_EMBEDDING_DIMENSION,
+            "embedding_provider": DEFAULT_EMBEDDING_PROVIDER,
             "similarity_threshold": SIMILARITY_THRESHOLD,
             "semantic_edge_weight": SEMANTIC_EDGE_WEIGHT,
         }
+
+    def save_config(self, api_key, embedding_dimension, embedding_provider,
+                    similarity_threshold, semantic_edge_weight):
+        with self._driver.session() as session:
+            session.run(
+                """
+                MERGE (c:Config {name: 'agift'})
+                SET c.isaacus_api_key = $key,
+                    c.embedding_dimension = $dim,
+                    c.embedding_provider = $provider,
+                    c.similarity_threshold = $sim_thresh,
+                    c.semantic_edge_weight = $sem_weight,
+                    c.updated_at = datetime()
+                """,
+                key=api_key,
+                dim=embedding_dimension,
+                provider=embedding_provider,
+                sim_thresh=similarity_threshold,
+                sem_weight=semantic_edge_weight,
+            )
 
     def log_run(self, status, details):
         with self._driver.session() as session:
@@ -291,6 +313,20 @@ class Neo4jBackend(GraphBackend):
                 DELETE r
                 """
             )
+
+    def get_run_logs(self, worker, limit=5):
+        with self._driver.session() as session:
+            result = session.run(
+                """
+                MATCH (r:RunLog {worker: $worker})
+                RETURN r
+                ORDER BY r.finished_at DESC
+                LIMIT $limit
+                """,
+                worker=worker,
+                limit=limit,
+            )
+            return [dict(record["r"]) for record in result]
 
     def get_all_term_ids(self):
         with self._driver.session() as session:

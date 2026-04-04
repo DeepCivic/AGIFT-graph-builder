@@ -16,9 +16,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get install -y --no-install-recommends docker-ce-cli \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir \
-    flask>=3.0.0 \
-    neo4j>=5.0.0
+RUN pip install --no-cache-dir flask>=3.0.0
+
+# Install the agift package (brings in neo4j driver, cogdb, etc. as needed)
+COPY pyproject.toml /build/pyproject.toml
+COPY agift/ /build/agift/
+COPY import_agift.py /build/import_agift.py
+RUN pip install --no-cache-dir /build && rm -rf /build
 
 COPY dashboard/ /app/
 

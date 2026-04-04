@@ -3,6 +3,8 @@
 import pytest
 
 from agift.common import (
+    DEFAULT_EMBEDDING_DIMENSION,
+    DEFAULT_EMBEDDING_PROVIDER,
     VALID_BACKENDS,
     VALID_PROVIDERS,
     VALID_DIMENSIONS,
@@ -55,6 +57,12 @@ class TestConstants:
     def test_valid_dimensions(self):
         assert 384 in VALID_DIMENSIONS
         assert 768 in VALID_DIMENSIONS
+
+    def test_default_embedding_dimension_is_valid(self):
+        assert DEFAULT_EMBEDDING_DIMENSION in VALID_DIMENSIONS
+
+    def test_default_embedding_provider_is_valid(self):
+        assert DEFAULT_EMBEDDING_PROVIDER in VALID_PROVIDERS
 
 
 class TestPrintSummary:
