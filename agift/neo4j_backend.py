@@ -7,6 +7,8 @@ from neo4j import GraphDatabase
 
 from agift.backend import GraphBackend
 from agift.common import (
+    DEFAULT_EMBEDDING_DIMENSION,
+    DEFAULT_EMBEDDING_PROVIDER,
     PROVIDER_ISAACUS,
     SEMANTIC_EDGE_WEIGHT,
     SIMILARITY_THRESHOLD,
@@ -232,8 +234,8 @@ class Neo4jBackend(GraphBackend):
             if record:
                 return {
                     "isaacus_api_key": record["key"],
-                    "embedding_dimension": record["dim"] or 512,
-                    "embedding_provider": record["provider"] or PROVIDER_ISAACUS,
+                    "embedding_dimension": record["dim"] or DEFAULT_EMBEDDING_DIMENSION,
+                    "embedding_provider": record["provider"] or DEFAULT_EMBEDDING_PROVIDER,
                     "similarity_threshold": (
                         record["sim_thresh"] or SIMILARITY_THRESHOLD
                     ),
@@ -243,8 +245,8 @@ class Neo4jBackend(GraphBackend):
                 }
         return {
             "isaacus_api_key": None,
-            "embedding_dimension": 512,
-            "embedding_provider": PROVIDER_ISAACUS,
+            "embedding_dimension": DEFAULT_EMBEDDING_DIMENSION,
+            "embedding_provider": DEFAULT_EMBEDDING_PROVIDER,
             "similarity_threshold": SIMILARITY_THRESHOLD,
             "semantic_edge_weight": SEMANTIC_EDGE_WEIGHT,
         }

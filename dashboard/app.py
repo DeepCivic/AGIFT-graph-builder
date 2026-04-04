@@ -23,9 +23,19 @@ NEO4J_URI = os.environ.get("NEO4J_URI", "bolt://localhost:7687")
 NEO4J_USER = os.environ.get("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "changeme")
 
-VALID_DIMENSIONS = [256, 384, 512, 768, 1024, 1792]
-VALID_PROVIDERS = ["isaacus", "local"]
-LOCAL_ONLY_DIMENSIONS = [384, 768]  # dimensions available for local provider
+from agift.common import (
+    DEFAULT_EMBEDDING_DIMENSION,
+    DEFAULT_EMBEDDING_PROVIDER,
+    SEMANTIC_EDGE_WEIGHT,
+    SIMILARITY_THRESHOLD,
+    VALID_DIMENSIONS as _VALID_DIMS,
+    VALID_PROVIDERS as _VALID_PROVS,
+    LOCAL_MODELS,
+)
+
+VALID_DIMENSIONS = list(_VALID_DIMS)
+VALID_PROVIDERS = list(_VALID_PROVS)
+LOCAL_ONLY_DIMENSIONS = list(LOCAL_MODELS.keys())
 
 
 def get_driver():
@@ -48,17 +58,17 @@ def get_config(driver) -> dict:
         if record:
             return {
                 "api_key": record["api_key"] or "",
-                "dimension": record["dimension"] or 512,
-                "provider": record["provider"] or "isaacus",
-                "similarity_threshold": record["sim_thresh"] or 0.70,
-                "semantic_edge_weight": record["sem_weight"] or 0.5,
+                "dimension": record["dimension"] or DEFAULT_EMBEDDING_DIMENSION,
+                "provider": record["provider"] or DEFAULT_EMBEDDING_PROVIDER,
+                "similarity_threshold": record["sim_thresh"] or SIMILARITY_THRESHOLD,
+                "semantic_edge_weight": record["sem_weight"] or SEMANTIC_EDGE_WEIGHT,
             }
     return {
         "api_key": "",
-        "dimension": 512,
-        "provider": "isaacus",
-        "similarity_threshold": 0.70,
-        "semantic_edge_weight": 0.5,
+        "dimension": DEFAULT_EMBEDDING_DIMENSION,
+        "provider": DEFAULT_EMBEDDING_PROVIDER,
+        "similarity_threshold": SIMILARITY_THRESHOLD,
+        "semantic_edge_weight": SEMANTIC_EDGE_WEIGHT,
     }
 
 

@@ -51,6 +51,10 @@ LOCAL_MODELS: dict[int, str] = {
     768: "all-mpnet-base-v2",
 }
 
+# Embedding defaults (single source of truth — not backend-specific)
+DEFAULT_EMBEDDING_DIMENSION = 512
+DEFAULT_EMBEDDING_PROVIDER = PROVIDER_ISAACUS
+
 # Semantic edge defaults
 SIMILARITY_THRESHOLD = 0.70
 SEMANTIC_EDGE_WEIGHT = 0.5

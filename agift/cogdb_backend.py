@@ -14,7 +14,8 @@ from pathlib import Path
 
 from agift.backend import GraphBackend
 from agift.common import (
-    PROVIDER_ISAACUS,
+    DEFAULT_EMBEDDING_DIMENSION,
+    DEFAULT_EMBEDDING_PROVIDER,
     SEMANTIC_EDGE_WEIGHT,
     SIMILARITY_THRESHOLD,
 )
@@ -257,8 +258,8 @@ class CogDBBackend(GraphBackend):
                 pass
         return {
             "isaacus_api_key": None,
-            "embedding_dimension": 512,
-            "embedding_provider": PROVIDER_ISAACUS,
+            "embedding_dimension": DEFAULT_EMBEDDING_DIMENSION,
+            "embedding_provider": DEFAULT_EMBEDDING_PROVIDER,
             "similarity_threshold": SIMILARITY_THRESHOLD,
             "semantic_edge_weight": SEMANTIC_EDGE_WEIGHT,
         }
