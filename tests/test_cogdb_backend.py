@@ -159,8 +159,31 @@ class TestConfig:
         cfg = cogdb_backend.get_config()
         assert cfg["isaacus_api_key"] is None
         assert cfg["embedding_dimension"] == 512
+        assert cfg["embedding_provider"] == "isaacus"
         assert cfg["similarity_threshold"] == 0.70
         assert cfg["semantic_edge_weight"] == 0.5
+
+    def test_save_and_read_config(self, cogdb_backend):
+        cogdb_backend.save_config(
+            api_key="test-key-123",
+            embedding_dimension=384,
+            embedding_provider="local",
+            similarity_threshold=0.80,
+            semantic_edge_weight=0.6,
+        )
+        cfg = cogdb_backend.get_config()
+        assert cfg["isaacus_api_key"] == "test-key-123"
+        assert cfg["embedding_dimension"] == 384
+        assert cfg["embedding_provider"] == "local"
+        assert cfg["similarity_threshold"] == 0.80
+        assert cfg["semantic_edge_weight"] == 0.6
+
+    def test_save_config_overwrites(self, cogdb_backend):
+        cogdb_backend.save_config("key1", 384, "local", 0.70, 0.5)
+        cogdb_backend.save_config("key2", 768, "isaacus", 0.80, 0.6)
+        cfg = cogdb_backend.get_config()
+        assert cfg["isaacus_api_key"] == "key2"
+        assert cfg["embedding_dimension"] == 768
 
 
 class TestLogRun:
@@ -170,6 +193,60 @@ class TestLogRun:
             "fetched": 10,
             "created": 5,
         })
+
+    def test_get_run_logs_returns_logged_entries(self, cogdb_backend):
+        cogdb_backend.log_run("success", {
+            "started_at": "2025-01-01T00:00:00",
+            "fetched": 10,
+            "created": 5,
+        })
+        cogdb_backend.log_run("error", {
+            "started_at": "2025-01-02T00:00:00",
+            "error": "connection refused",
+        })
+        logs = cogdb_backend.get_run_logs("agift", limit=5)
+        assert len(logs) == 2
+        # Newest first
+        assert logs[0]["status"] == "error"
+        assert logs[1]["status"] == "success"
+
+    def test_get_run_logs_respects_limit(self, cogdb_backend):
+        for i in range(5):
+            cogdb_backend.log_run("success", {
+                "started_at": f"2025-01-0{i+1}T00:00:00",
+                "fetched": i,
+            })
+        logs = cogdb_backend.get_run_logs("agift", limit=2)
+        assert len(logs) == 2
+
+    def test_get_run_logs_filters_by_worker(self, cogdb_backend):
+        cogdb_backend.log_run("success", {"started_at": "2025-01-01T00:00:00"})
+        logs = cogdb_backend.get_run_logs("enrichment", limit=5)
+        assert len(logs) == 0
+
+    def test_log_run_field_names_match_template(self, cogdb_backend):
+        """Run log entries should use terms_fetched, terms_created, etc."""
+        cogdb_backend.log_run("success", {
+            "started_at": "2025-01-01T00:00:00",
+            "fetched": 100,
+            "created": 50,
+            "updated": 10,
+            "unchanged": 40,
+            "embedded": 50,
+            "embed_failed": 0,
+            "semantic_edges_created": 25,
+            "embedding_provider": "local",
+        })
+        logs = cogdb_backend.get_run_logs("agift", limit=1)
+        log = logs[0]
+        assert log["terms_fetched"] == 100
+        assert log["terms_created"] == 50
+        assert log["terms_updated"] == 10
+        assert log["terms_unchanged"] == 40
+        assert log["terms_embedded"] == 50
+        assert log["terms_embed_failed"] == 0
+        assert log["semantic_edges_created"] == 25
+        assert log["embedding_provider"] == "local"
 
 
 class TestSummaryStats:

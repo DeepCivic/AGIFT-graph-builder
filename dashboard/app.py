@@ -24,7 +24,6 @@ from agift.common import (
     LOCAL_MODELS,
     SEMANTIC_EDGE_WEIGHT,
     SIMILARITY_THRESHOLD,
-    VALID_BACKENDS,
     VALID_DIMENSIONS as _VALID_DIMS,
     VALID_PROVIDERS as _VALID_PROVS,
     create_backend,
