@@ -35,9 +35,7 @@ def _docker_available():
         return False
 
 
-pytestmark = pytest.mark.skipif(
-    not _docker_available(), reason="Docker not available"
-)
+pytestmark = pytest.mark.skipif(not _docker_available(), reason="Docker not available")
 
 
 @pytest.fixture(scope="module")
@@ -47,9 +45,9 @@ def docker_image():
         ["docker", "build", "-t", IMAGE_TAG, "-f", "Dockerfile", "."],
         timeout=BUILD_TIMEOUT,
     )
-    assert result.returncode == 0, (
-        f"Docker build failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
-    )
+    assert (
+        result.returncode == 0
+    ), f"Docker build failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
     yield IMAGE_TAG
     # Cleanup image after all tests
     _run(["docker", "rmi", "-f", IMAGE_TAG], timeout=30)
@@ -73,10 +71,17 @@ class TestImageStructure:
         try:
             result = _run(
                 [
-                    "docker", "run", "--rm", "--name", name,
-                    "-e", "AGIFT_MODE=cli",
+                    "docker",
+                    "run",
+                    "--rm",
+                    "--name",
+                    name,
+                    "-e",
+                    "AGIFT_MODE=cli",
                     docker_image,
-                    "python", "-c", "import agift; print(agift.__all__[:3])",
+                    "python",
+                    "-c",
+                    "import agift; print(agift.__all__[:3])",
                 ],
                 timeout=60,
             )
@@ -90,10 +95,16 @@ class TestImageStructure:
         try:
             result = _run(
                 [
-                    "docker", "run", "--rm", "--name", name,
-                    "--entrypoint", "python",
+                    "docker",
+                    "run",
+                    "--rm",
+                    "--name",
+                    name,
+                    "--entrypoint",
+                    "python",
                     docker_image,
-                    "-c", "import gunicorn; print(gunicorn.__version__)",
+                    "-c",
+                    "import gunicorn; print(gunicorn.__version__)",
                 ],
                 timeout=30,
             )
@@ -106,10 +117,16 @@ class TestImageStructure:
         try:
             result = _run(
                 [
-                    "docker", "run", "--rm", "--name", name,
-                    "--entrypoint", "python",
+                    "docker",
+                    "run",
+                    "--rm",
+                    "--name",
+                    name,
+                    "--entrypoint",
+                    "python",
                     docker_image,
-                    "-c", "import flask; print(flask.__version__)",
+                    "-c",
+                    "import flask; print(flask.__version__)",
                 ],
                 timeout=30,
             )
@@ -122,10 +139,16 @@ class TestImageStructure:
         try:
             result = _run(
                 [
-                    "docker", "run", "--rm", "--name", name,
-                    "--entrypoint", "python",
+                    "docker",
+                    "run",
+                    "--rm",
+                    "--name",
+                    name,
+                    "--entrypoint",
+                    "python",
                     docker_image,
-                    "-c", "import sentence_transformers; print('ok')",
+                    "-c",
+                    "import sentence_transformers; print('ok')",
                 ],
                 timeout=30,
             )
@@ -139,10 +162,16 @@ class TestImageStructure:
         try:
             result = _run(
                 [
-                    "docker", "run", "--rm", "--name", name,
-                    "--entrypoint", "test",
+                    "docker",
+                    "run",
+                    "--rm",
+                    "--name",
+                    name,
+                    "--entrypoint",
+                    "test",
                     docker_image,
-                    "-x", "/entrypoint.sh",
+                    "-x",
+                    "/entrypoint.sh",
                 ],
                 timeout=15,
             )
@@ -155,10 +184,16 @@ class TestImageStructure:
         try:
             result = _run(
                 [
-                    "docker", "run", "--rm", "--name", name,
-                    "--entrypoint", "test",
+                    "docker",
+                    "run",
+                    "--rm",
+                    "--name",
+                    name,
+                    "--entrypoint",
+                    "test",
                     docker_image,
-                    "-f", "/app/dashboard/app.py",
+                    "-f",
+                    "/app/dashboard/app.py",
                 ],
                 timeout=15,
             )
@@ -176,8 +211,13 @@ class TestCLIMode:
         try:
             result = _run(
                 [
-                    "docker", "run", "--rm", "--name", name,
-                    "-e", "AGIFT_MODE=cli",
+                    "docker",
+                    "run",
+                    "--rm",
+                    "--name",
+                    name,
+                    "-e",
+                    "AGIFT_MODE=cli",
                     docker_image,
                     "--help",
                 ],
@@ -194,10 +234,16 @@ class TestCLIMode:
         try:
             result = _run(
                 [
-                    "docker", "run", "--rm", "--name", name,
-                    "-e", "AGIFT_MODE=cli",
+                    "docker",
+                    "run",
+                    "--rm",
+                    "--name",
+                    name,
+                    "-e",
+                    "AGIFT_MODE=cli",
                     docker_image,
-                    "--backend", "invalid",
+                    "--backend",
+                    "invalid",
                 ],
                 timeout=30,
             )
@@ -215,8 +261,13 @@ class TestInvalidMode:
         try:
             result = _run(
                 [
-                    "docker", "run", "--rm", "--name", name,
-                    "-e", "AGIFT_MODE=bogus",
+                    "docker",
+                    "run",
+                    "--rm",
+                    "--name",
+                    name,
+                    "-e",
+                    "AGIFT_MODE=bogus",
                     docker_image,
                 ],
                 timeout=15,
@@ -237,11 +288,19 @@ class TestDashboardMode:
             # Start container in background with CogDB (no Neo4j needed)
             _run(
                 [
-                    "docker", "run", "-d", "--name", name,
-                    "-e", "AGIFT_MODE=dashboard",
-                    "-e", "AGIFT_CRON_ENABLED=0",
-                    "-e", "BACKEND_TYPE=cogdb",
-                    "-p", "15050:5050",
+                    "docker",
+                    "run",
+                    "-d",
+                    "--name",
+                    name,
+                    "-e",
+                    "AGIFT_MODE=dashboard",
+                    "-e",
+                    "AGIFT_CRON_ENABLED=0",
+                    "-e",
+                    "BACKEND_TYPE=cogdb",
+                    "-p",
+                    "15050:5050",
                     docker_image,
                 ],
                 timeout=30,
@@ -278,11 +337,19 @@ class TestDashboardMode:
         try:
             _run(
                 [
-                    "docker", "run", "-d", "--name", name,
-                    "-e", "AGIFT_MODE=dashboard",
-                    "-e", "AGIFT_CRON_ENABLED=0",
-                    "-e", "BACKEND_TYPE=cogdb",
-                    "-p", "15051:5050",
+                    "docker",
+                    "run",
+                    "-d",
+                    "--name",
+                    name,
+                    "-e",
+                    "AGIFT_MODE=dashboard",
+                    "-e",
+                    "AGIFT_CRON_ENABLED=0",
+                    "-e",
+                    "BACKEND_TYPE=cogdb",
+                    "-p",
+                    "15051:5050",
                     docker_image,
                 ],
                 timeout=30,
@@ -296,6 +363,7 @@ class TestDashboardMode:
                     req = urllib.request.urlopen(url, timeout=5)
                     if req.status == 200:
                         import json
+
                         data = json.loads(req.read())
                         assert "running" in data
                         assert data["running"] is False
@@ -323,9 +391,15 @@ class TestWorkerMode:
         try:
             _run(
                 [
-                    "docker", "run", "-d", "--name", name,
-                    "-e", "AGIFT_MODE=worker",
-                    "-e", "BACKEND_TYPE=cogdb",
+                    "docker",
+                    "run",
+                    "-d",
+                    "--name",
+                    name,
+                    "-e",
+                    "AGIFT_MODE=worker",
+                    "-e",
+                    "BACKEND_TYPE=cogdb",
                     docker_image,
                 ],
                 timeout=30,

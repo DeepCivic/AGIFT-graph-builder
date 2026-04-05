@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agift-graph"
-version = "0.1.2"
+version = "0.2.0"
 description = "Australian Government Interactive Functions Thesaurus (AGIFT) as a Neo4j knowledge graph with embeddings and dual edge types"
 readme = "README.md"
 license = {text = "Apache-2.0"}
@@ -42,6 +42,7 @@ all = [
 ]
 dev = [
     "pytest>=7.0.0",
+    "pytest-timeout>=2.0.0",
     "black>=23.0.0",
     "flake8>=6.0.0",
     "mypy>=1.0.0",

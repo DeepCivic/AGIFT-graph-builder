@@ -43,7 +43,7 @@ def _fetch_xml(task: str, arg: str = "") -> ET.Element:
         except (URLError, TimeoutError, ET.ParseError) as e:
             if attempt == _MAX_RETRIES - 1:
                 raise
-            wait = _BASE_BACKOFF * (2 ** attempt) + random.uniform(0, 1)
+            wait = _BASE_BACKOFF * (2**attempt) + random.uniform(0, 1)
             print(f"  Retry {attempt + 1} for {task} {arg}: {e} (wait {wait:.1f}s)")
             time.sleep(wait)
 
@@ -158,8 +158,10 @@ def fetch_full_hierarchy(include_alts: bool = True) -> list[AgiftTerm]:
     # Second pass: fetch alt labels concurrently
     if include_alts:
         term_ids = [t.term_id for t in all_terms]
-        print(f"\nFetching alt labels for {len(term_ids)} terms "
-              f"({_ALT_LABEL_WORKERS} concurrent workers)...")
+        print(
+            f"\nFetching alt labels for {len(term_ids)} terms "
+            f"({_ALT_LABEL_WORKERS} concurrent workers)..."
+        )
         alt_map = _fetch_alt_labels_batch(term_ids)
         for term in all_terms:
             term.alt_labels = alt_map.get(term.term_id, [])

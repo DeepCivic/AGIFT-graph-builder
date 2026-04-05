@@ -10,7 +10,41 @@ permissions:
   contents: write
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install ".[dev,cogdb]"
+
+      - name: Check formatting (black)
+        run: black --check agift/ tests/ dashboard/ import_agift.py
+
+      - name: Lint (flake8)
+        run: flake8 agift/ tests/ dashboard/ import_agift.py
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install ".[dev,cogdb]"
+
+      - name: Run tests
+        run: pytest --ignore=tests/test_docker.py
+
   build-pypi:
+    needs: [lint, test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
