@@ -75,8 +75,8 @@ case "$MODE" in
         echo "Manual run:  docker exec <container> python import_agift.py"
         echo "Dry run:     docker exec <container> python import_agift.py --dry-run"
         echo ""
-        # Keep container alive
-        exec cron -f
+        # Keep container alive (cron is already running in background via setup_cron)
+        exec tail -f /dev/null
         ;;
 
     cli)

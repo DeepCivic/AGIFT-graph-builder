@@ -76,10 +76,9 @@ class TestImageStructure:
                     "--rm",
                     "--name",
                     name,
-                    "-e",
-                    "AGIFT_MODE=cli",
-                    docker_image,
+                    "--entrypoint",
                     "python",
+                    docker_image,
                     "-c",
                     "import agift; print(agift.__all__[:3])",
                 ],
@@ -394,6 +393,7 @@ class TestWorkerMode:
                     "docker",
                     "run",
                     "-d",
+                    "--init",
                     "--name",
                     name,
                     "-e",
@@ -405,8 +405,8 @@ class TestWorkerMode:
                 timeout=30,
             )
 
-            # Give it a moment to start
-            time.sleep(3)
+            # Give cron daemon time to start
+            time.sleep(5)
 
             # Check container is still running
             inspect = _run(

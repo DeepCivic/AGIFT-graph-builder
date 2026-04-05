@@ -197,16 +197,22 @@ Apache 2.0 — see [LICENSE](LICENSE).
 
 ## Publishing
 
-This project uses a tag-based release workflow:
+This project uses a tag-based release workflow with a single CI definition:
 
+- `ci.yml` is the single source of truth for lint, test, and Docker checks
+- `publish.yml` calls `ci.yml` as a reusable workflow — no duplicated jobs
+
+Pipeline sequence on tag push:
+1. CI runs (lint + test + Docker tests)
+2. Build PyPI package
+3. Publish to PyPI
+4. Build and push Docker image to Docker Hub (`deepcivic/agift`)
+5. Create GitHub Release with changelog entry
+
+To release:
 1. Update `CHANGELOG.md` with a new version entry
-2. Run `./release.sh 0.2.0` (replaces version in `pyproject.toml`, commits, tags)
+2. Run `./release.sh 0.2.0` (updates `pyproject.toml`, commits, tags)
 3. Push: `git push origin main --tags`
-
-The GitHub Actions workflow will:
-- Build and publish to PyPI
-- Build and push Docker image to Docker Hub (`deepcivic/agift`)
-- Create a GitHub Release with the changelog entry
 
 Secrets required in GitHub repo settings:
 - `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (repo-level secrets)
