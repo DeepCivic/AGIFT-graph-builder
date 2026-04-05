@@ -332,6 +332,9 @@ class CogDBBackend(GraphBackend):
         logs.sort(key=lambda x: x.get("finished_at", ""), reverse=True)
         return logs[:limit]
 
+    def get_term_properties(self, term_id):
+        return self._get_props(term_id)
+
     def get_all_term_ids(self):
         return self._all_term_ids()
 

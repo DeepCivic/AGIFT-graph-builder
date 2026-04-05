@@ -326,6 +326,24 @@ class Neo4jBackend(GraphBackend):
             )
             return [dict(record["r"]) for record in result]
 
+    def get_term_properties(self, term_id):
+        with self._driver.session() as session:
+            result = session.run(
+                """
+                MATCH (t:Term {term_id: $term_id})
+                RETURN t.term_id AS term_id, t.label AS label,
+                       t.label_norm AS label_norm, t.depth AS depth,
+                       t.dcat_theme AS dcat_theme,
+                       t.top_level_id AS top_level_id,
+                       t.alt_labels AS alt_labels
+                """,
+                term_id=term_id,
+            )
+            record = result.single()
+            if record is None:
+                return None
+            return dict(record)
+
     def get_all_term_ids(self):
         with self._driver.session() as session:
             result = session.run("MATCH (t:Term) RETURN t.term_id AS tid")

@@ -39,7 +39,7 @@ class TestUpsertTerm:
         cogdb_backend.upsert_term(1, "Env", "env", 1, "ENVI", 1, [])
         cogdb_backend.store_embedding(1, [0.1, 0.2], 2, "test")
         cogdb_backend.upsert_term(1, "Env updated", "env updated", 1, "ENVI", 1, [])
-        props = cogdb_backend._get_props(1)
+        props = cogdb_backend.get_term_properties(1)
         assert props["embedding"] == [0.1, 0.2]
         assert props["label"] == "Env updated"
 

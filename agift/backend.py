@@ -118,6 +118,15 @@ class GraphBackend(ABC):
         """Return recent run logs for *worker*, newest first."""
 
     @abstractmethod
+    def get_term_properties(self, term_id: int) -> dict | None:
+        """Return the stored properties for a term as a plain dict.
+
+        Keys typically include ``term_id``, ``label``, ``label_norm``,
+        ``depth``, ``dcat_theme``, ``top_level_id``, and ``alt_labels``.
+        Returns ``None`` when the term does not exist.
+        """
+
+    @abstractmethod
     def get_all_term_ids(self) -> list[int]:
         """Return every term_id in the graph."""
 
