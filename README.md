@@ -109,7 +109,7 @@ All other settings (dimension, provider, similarity threshold, semantic edge wei
 
 ## Full Docker stack
 
-The included `docker-compose.yml` runs Neo4j, the dashboard, and a cron worker:
+The included `docker-compose.yml` runs Neo4j and the AGIFT container (dashboard + cron worker):
 
 ```bash
 docker compose up -d --build
@@ -121,8 +121,15 @@ Then open the dashboard at http://localhost:5050 and click "Full Pipeline" or "G
 |---------|------|-------------|
 | Neo4j Browser | 7474 | Graph database UI |
 | Neo4j Bolt | 7687 | Database protocol |
-| Dashboard | 5050 | Config, run controls, logs |
-| Worker | — | Cron-scheduled pipeline runs |
+| AGIFT | 5050 | Dashboard, pipeline runner, cron worker |
+
+The `AGIFT_MODE` env var controls container behaviour:
+
+| Mode | Description |
+|------|-------------|
+| `dashboard` (default) | Gunicorn web server + optional cron |
+| `worker` | Cron only, no web server |
+| `cli` | Run pipeline once and exit |
 
 ## CLI usage
 
@@ -163,17 +170,16 @@ agift/
 ├── cogdb_backend.py         # CogDB backend implementation
 ├── cli.py                   # CLI entry point + run_pipeline()
 ├── common.py                # Constants, backend factory, summary
-├── fetch.py                 # TemaTres API fetching
+├── fetch.py                 # TemaTres API fetching (concurrent)
 ├── graph.py                 # Schema setup + node/edge upsert
 ├── embed.py                 # Embedding providers (local + Isaacus)
 ├── link.py                  # Cosine similarity + semantic edges
-docker-compose.yml           # Full stack (Neo4j + dashboard + worker)
+Dockerfile                   # Unified image (dashboard + worker + CLI)
+entrypoint.sh                # Container mode dispatch
+docker-compose.yml           # Full stack (Neo4j + AGIFT container)
 dashboard/
-├── app.py                   # Flask dashboard + run controls
+├── app.py                   # Flask dashboard + in-process pipeline
 ├── templates/index.html
-worker/
-├── Dockerfile
-├── entrypoint.sh            # Cron scheduler + manual trigger
 import_agift.py              # Backward-compatible entry point
 pyproject.toml
 CHANGELOG.md                 # Version history (release notes source)
@@ -199,7 +205,7 @@ This project uses a tag-based release workflow:
 
 The GitHub Actions workflow will:
 - Build and publish to PyPI
-- Build and push Docker images to Docker Hub (`deepcivic/agift-dashboard`, `deepcivic/agift-worker`)
+- Build and push Docker image to Docker Hub (`deepcivic/agift`)
 - Create a GitHub Release with the changelog entry
 
 Secrets required in GitHub repo settings:

@@ -12,7 +12,7 @@ AGIFT is a living vocabulary — the National Archives add, rename, and restruct
 
 ### 1. Vocabulary fetch
 
-The pipeline walks the TemaTres REST API to retrieve the full AGIFT hierarchy across three levels: top-level functions (L1), secondary functions (L2), and detailed functions (L3). Alternative labels for each term are fetched in a separate pass.
+The pipeline walks the TemaTres REST API to retrieve the full AGIFT hierarchy across three levels: top-level functions (L1), secondary functions (L2), and detailed functions (L3). Alternative labels for each term are fetched concurrently in a separate pass using a thread pool.
 
 API endpoint: `https://vocabularyserver.com/agift/services.php`
 
@@ -96,7 +96,7 @@ flowchart TD
 
 ## Deployment
 
-The pipeline is designed for Docker. Three containers run the system: Neo4j for the graph database, a worker container that executes the pipeline on a weekly cron schedule (Wednesday 4:00 AM UTC), and a Flask dashboard for configuration and manual run control.
+The pipeline is designed for Docker. A single unified container runs the system alongside Neo4j: it serves the Flask dashboard via gunicorn, executes the pipeline on a weekly cron schedule (Wednesday 4:00 AM UTC), and supports one-shot CLI runs. The `AGIFT_MODE` environment variable selects the behaviour (`dashboard`, `worker`, or `cli`).
 
 ---
 
@@ -137,6 +137,6 @@ The project uses a tag-based release workflow that publishes to PyPI and Docker 
 2. **Run `./release.sh 0.2.0`** — updates pyproject.toml, commits, tags
 3. **Push tags** — triggers GitHub Actions workflow
 
-The workflow builds and publishes the Python package to PyPI, builds and pushes Docker images (`deepcivic/agift-dashboard`, `deepcivic/agift-worker`), and creates a GitHub Release with the changelog entry.
+The workflow builds and publishes the Python package to PyPI, builds and pushes the Docker image (`deepcivic/agift`), and creates a GitHub Release with the changelog entry.
 
 Docker images are tagged with the semantic version (`0.2.0`), major.minor (`0.2`), and `latest`.

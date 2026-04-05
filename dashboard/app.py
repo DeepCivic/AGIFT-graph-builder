@@ -1,23 +1,21 @@
 """
-AGIFT Dashboard — simple Flask app for worker config, run history, and run controls.
+AGIFT Dashboard — Flask app for pipeline config, run history, and run controls.
 
-Features:
-  - Set/view Isaacus API key and embedding provider
-  - Set embedding dimension, similarity threshold, semantic edge weight
-  - Trigger import runs from the UI (full, graph-only, dry-run)
-  - Last 5 runs for AGIFT worker
-  - Last 5 runs for enrichment worker
+Runs the pipeline in-process (no Docker-in-Docker). A background thread
+executes run_pipeline() and streams output to the UI via polling.
 
 Backend-agnostic: reads BACKEND_TYPE env var ("neo4j" or "cogdb") and
 delegates all data access through the GraphBackend interface.
 """
 
+import io
 import os
-import subprocess
+import sys
 import threading
 
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 
+from agift.cli import run_pipeline
 from agift.common import (
     DEFAULT_EMBEDDING_DIMENSION,
     DEFAULT_EMBEDDING_PROVIDER,
@@ -55,7 +53,6 @@ def index():
     finally:
         backend.close()
 
-    # Adapt backend stats shape to what the template expects
     stats = {
         "total_terms": raw_stats["total"],
         "embedded_terms": raw_stats["embedded"],
@@ -64,7 +61,6 @@ def index():
         "by_depth": {str(d): c for d, c in raw_stats["by_depth"]},
     }
 
-    # Adapt config keys for the template
     tpl_config = {
         "api_key": config.get("isaacus_api_key") or "",
         "dimension": config["embedding_dimension"],
@@ -73,7 +69,6 @@ def index():
         "semantic_edge_weight": config["semantic_edge_weight"],
     }
 
-    # Mask API key for display
     api_key = tpl_config["api_key"]
     masked_key = ""
     if api_key:
@@ -132,7 +127,6 @@ def update_config():
 
     backend = _get_backend()
     try:
-        # If api_key field is empty, keep existing key
         if not api_key:
             existing = backend.get_config()
             api_key = existing.get("isaacus_api_key") or ""
@@ -147,97 +141,86 @@ def update_config():
 
 
 # ---------------------------------------------------------------------------
-# Run controls — trigger import_agift.py on the worker container
+# Run controls — execute run_pipeline() in a background thread
 # ---------------------------------------------------------------------------
 
-# In-memory state for the current run (only one at a time)
 _run_state = {
     "running": False,
     "output": "",
-    "command": "",
+    "preset_label": "",
 }
 _run_lock = threading.Lock()
 
-DOCKER_BIN = os.environ.get("DOCKER_BIN", "docker")
-WORKER_CONTAINER = os.environ.get("WORKER_CONTAINER", "agift-worker")
-
-# Available run presets
+# Pipeline presets
 RUN_PRESETS = {
     "full": {
         "label": "Full Pipeline",
         "desc": "Fetch + graph + embed + semantic edges",
-        "args": [],
+        "kwargs": {},
     },
     "graph_only": {
         "label": "Graph Only",
         "desc": "Fetch + graph, skip embeddings and semantic edges",
-        "args": ["--skip-embed", "--skip-semantic"],
+        "kwargs": {"skip_embed": True, "skip_semantic": True},
     },
     "local_384": {
         "label": "Local Embed (384d)",
         "desc": "Full pipeline with local sentence-transformers, 384 dim",
-        "args": ["--provider", "local", "--dimension", "384"],
+        "kwargs": {"provider": "local", "dimension": 384},
     },
     "local_768": {
         "label": "Local Embed (768d)",
         "desc": "Full pipeline with local sentence-transformers, 768 dim",
-        "args": ["--provider", "local", "--dimension", "768"],
+        "kwargs": {"provider": "local", "dimension": 768},
     },
     "dry_run": {
         "label": "Dry Run",
         "desc": "Fetch from API only, no writes",
-        "args": ["--dry-run"],
+        "kwargs": {"dry_run": True},
     },
     "force_embed": {
         "label": "Force Re-embed",
         "desc": "Re-embed all + rebuild semantic edges",
-        "args": ["--force-embed"],
+        "kwargs": {"force_embed": True},
     },
 }
 
 
-def _exec_worker(args: list[str]) -> None:
-    """Run a command on the worker container in a background thread.
+class _OutputCapture(io.StringIO):
+    """StringIO that also writes to the shared run state."""
 
-    Args:
-        args: Arguments to pass to import_agift.py.
-    """
-    backend_args = ["--backend", BACKEND_TYPE] if BACKEND_TYPE != "neo4j" else []
-    cmd = (
-        [DOCKER_BIN, "exec", WORKER_CONTAINER, "python", "-u", "import_agift.py"]
-        + backend_args
-        + args
-    )
-    _run_state["command"] = " ".join(cmd)
+    def write(self, s):
+        super().write(s)
+        with _run_lock:
+            _run_state["output"] += s
+        return len(s)
+
+
+def _exec_pipeline(kwargs: dict) -> None:
+    """Run the pipeline in a background thread, capturing stdout."""
     _run_state["output"] = ""
     _run_state["running"] = True
 
+    capture = _OutputCapture()
+    old_stdout, old_stderr = sys.stdout, sys.stderr
+    sys.stdout = capture
+    sys.stderr = capture
+
     try:
-        proc = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,
-        )
-        for line in proc.stdout:
-            with _run_lock:
-                _run_state["output"] += line
-        proc.wait()
-        with _run_lock:
-            if proc.returncode != 0:
-                _run_state["output"] += f"\n[exit code {proc.returncode}]"
+        run_pipeline(backend_type=BACKEND_TYPE, **kwargs)
     except Exception as e:
         with _run_lock:
-            _run_state["output"] += f"\nERROR: {e}"
+            _run_state["output"] += f"\nERROR: {e}\n"
     finally:
+        sys.stdout = old_stdout
+        sys.stderr = old_stderr
         with _run_lock:
             _run_state["running"] = False
 
 
 @app.route("/run", methods=["POST"])
 def trigger_run():
-    """Trigger an import run on the worker container."""
+    """Trigger a pipeline run in-process."""
     if _run_state["running"]:
         flash("A run is already in progress.", "error")
         return redirect(url_for("index"))
@@ -248,9 +231,11 @@ def trigger_run():
         flash(f"Unknown preset '{preset_key}'.", "error")
         return redirect(url_for("index"))
 
+    _run_state["preset_label"] = preset["label"]
+
     thread = threading.Thread(
-        target=_exec_worker,
-        args=(preset["args"],),
+        target=_exec_pipeline,
+        args=(preset["kwargs"],),
         daemon=True,
     )
     thread.start()
@@ -265,11 +250,7 @@ def run_status():
         return jsonify(
             {
                 "running": _run_state["running"],
-                "command": _run_state["command"],
+                "command": _run_state["preset_label"],
                 "output": _run_state["output"],
             }
         )
-
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5050, debug=False)

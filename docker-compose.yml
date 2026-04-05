@@ -10,28 +10,16 @@ services:
     volumes:
       - neo4j_data:/data
 
-  dashboard:
+  agift:
     build:
       context: .
-      dockerfile: dashboard/Dockerfile
+      dockerfile: Dockerfile
+    container_name: agift
     ports:
       - "5050:5050"
     environment:
-      BACKEND_TYPE: ${BACKEND_TYPE:-neo4j}
-      NEO4J_URI: bolt://neo4j:7687
-      NEO4J_USER: neo4j
-      NEO4J_PASSWORD: changeme
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    depends_on:
-      - neo4j
-
-  worker:
-    build:
-      context: .
-      dockerfile: worker/Dockerfile
-    container_name: agift-worker
-    environment:
+      AGIFT_MODE: dashboard
+      AGIFT_CRON_ENABLED: "1"
       BACKEND_TYPE: ${BACKEND_TYPE:-neo4j}
       NEO4J_URI: bolt://neo4j:7687
       NEO4J_USER: neo4j

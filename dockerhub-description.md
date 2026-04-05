@@ -1,15 +1,16 @@
-# AGIFT Graph Docker Images
+# AGIFT Graph
 
 Australian Government Interactive Functions Thesaurus (AGIFT) as a knowledge graph with embeddings and dual edge types.
 
-## Available Images
+## Image: `deepcivic/agift`
 
-### `deepcivic/agift-dashboard`
-**Port:** 5050  
-**Description:** Flask web dashboard for configuring and running the AGIFT graph pipeline. Provides UI for managing embeddings, triggering runs, and viewing logs.
+A unified container that runs the dashboard, pipeline worker, or CLI depending on the `AGIFT_MODE` environment variable.
 
-### `deepcivic/agift-worker`
-**Description:** Background worker for processing AGIFT data, generating embeddings, and creating semantic similarity edges. Runs on a cron schedule or can be triggered manually.
+| Mode | Description |
+|------|-------------|
+| `dashboard` (default) | Gunicorn web server on port 5050 + optional cron |
+| `worker` | Cron-scheduled pipeline runs only, no web server |
+| `cli` | Run the pipeline once and exit |
 
 ## Quick Start
 
@@ -18,7 +19,7 @@ Australian Government Interactive Functions Thesaurus (AGIFT) as a knowledge gra
 git clone https://github.com/DeepCivic/AGIFT-graph-builder
 cd AGIFT-graph-builder
 
-# Start the full stack
+# Start the full stack (Neo4j + AGIFT dashboard/worker)
 docker compose up -d --build
 ```
 
@@ -29,8 +30,7 @@ Then open the dashboard at http://localhost:5050
 | Service | Image | Port | Description |
 |---------|-------|------|-------------|
 | Neo4j | `neo4j:5-community` | 7474, 7687 | Graph database |
-| Dashboard | `deepcivic/agift-dashboard` | 5050 | Web interface |
-| Worker | `deepcivic/agift-worker` | - | Background processing |
+| AGIFT | `deepcivic/agift` | 5050 | Dashboard + pipeline + cron |
 
 ## What It Does
 
@@ -43,8 +43,6 @@ TemaTres API ──►  Graph ──► Embeddings ──► Semantic Edges
 
 ## Graph Model
 
-Two edge types with different weights for query-time flexibility:
-
 | Edge | Type | Weight | Description |
 |------|------|--------|-------------|
 | `PARENT_OF` | structural | 1.0 | AGIFT hierarchy (L1 → L2 → L3) |
@@ -54,15 +52,15 @@ Two edge types with different weights for query-time flexibility:
 
 ### Environment Variables
 
-**Dashboard:**
-- `BACKEND_TYPE`: `neo4j` (default) or `cogdb`
-- `NEO4J_URI`: `bolt://neo4j:7687` (default)
-- `NEO4J_USER`: `neo4j` (default)
-- `NEO4J_PASSWORD`: `changeme` (default)
-
-**Worker:**
-- Same as dashboard plus:
-- `TRANSFORMERS_CACHE`: `/app/models` (model cache volume)
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AGIFT_MODE` | `dashboard` | Container mode: `dashboard`, `worker`, `cli` |
+| `AGIFT_CRON_ENABLED` | `1` | Enable weekly cron in dashboard mode |
+| `BACKEND_TYPE` | `neo4j` | Graph backend: `neo4j` or `cogdb` |
+| `NEO4J_URI` | `bolt://neo4j:7687` | Neo4j connection URI |
+| `NEO4J_USER` | `neo4j` | Neo4j username |
+| `NEO4J_PASSWORD` | `changeme` | Neo4j password |
+| `TRANSFORMERS_CACHE` | `/app/models` | Model cache directory |
 
 ### Volumes
 - `neo4j_data`: Neo4j database storage
@@ -77,34 +75,39 @@ Two edge types with different weights for query-time flexibility:
 
 ## Usage Examples
 
-### Standalone Dashboard
+### Dashboard mode (default)
 ```bash
 docker run -p 5050:5050 \
   -e NEO4J_URI=bolt://your-neo4j:7687 \
   -e NEO4J_USER=neo4j \
   -e NEO4J_PASSWORD=yourpassword \
-  deepcivic/agift-dashboard:latest
+  deepcivic/agift:latest
 ```
 
-### Standalone Worker
+### Worker mode (cron only)
 ```bash
 docker run \
+  -e AGIFT_MODE=worker \
   -e NEO4J_URI=bolt://your-neo4j:7687 \
   -e NEO4J_USER=neo4j \
   -e NEO4J_PASSWORD=yourpassword \
   -v model_cache:/app/models \
-  deepcivic/agift-worker:latest
+  deepcivic/agift:latest
+```
+
+### CLI mode (one-shot)
+```bash
+docker run --rm \
+  -e AGIFT_MODE=cli \
+  -e BACKEND_TYPE=cogdb \
+  deepcivic/agift:latest --dry-run
 ```
 
 ## Development
 
-### Building Images Locally
+### Building locally
 ```bash
-# Build dashboard
-docker build -t deepcivic/agift-dashboard:local -f dashboard/Dockerfile .
-
-# Build worker
-docker build -t deepcivic/agift-worker:local -f worker/Dockerfile .
+docker build -t deepcivic/agift:local .
 ```
 
 ## Source Code
@@ -124,7 +127,3 @@ AGIFT is maintained by the National Archives of Australia and published via Tema
 ## Changelog
 
 See [CHANGELOG.md](https://github.com/DeepCivic/AGIFT-graph-builder/blob/main/CHANGELOG.md) for version history.
-
----
-
-*This description is automatically updated from the project's README when new Docker images are published.*

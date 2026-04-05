@@ -48,13 +48,6 @@ jobs:
   publish-docker:
     needs: build-pypi
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - image: deepcivic/agift-dashboard
-            dockerfile: dashboard/Dockerfile
-          - image: deepcivic/agift-worker
-            dockerfile: worker/Dockerfile
     steps:
       - uses: actions/checkout@v4
 
@@ -62,7 +55,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ matrix.image }}
+          images: deepcivic/agift
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -80,22 +73,12 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ${{ matrix.dockerfile }}
+          file: Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Update Docker Hub description
-        uses: peter-evans/dockerhub-description@v4
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: ${{ matrix.image }}
-          short-description: |
-            ${{ matrix.image == 'deepcivic/agift-dashboard' && 'AGIFT Dashboard - Web interface for AGIFT knowledge graph' || 'AGIFT Worker - Background processor for AGIFT graph embeddings' }}
-          readme-filepath: ./dockerhub-description.md
 
   github-release:
     needs: [publish-pypi, publish-docker]
@@ -107,7 +90,6 @@ jobs:
         id: changelog
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          # Extract the section for this version from CHANGELOG.md
           awk "/^## \\[${VERSION}\\]/{found=1; next} /^## \\[/{if(found) exit} found{print}" CHANGELOG.md > /tmp/release_notes.md
           echo "notes_file=/tmp/release_notes.md" >> "$GITHUB_OUTPUT"
 

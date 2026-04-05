@@ -41,4 +41,19 @@ jobs:
         run: pip install ".[dev,cogdb]"
 
       - name: Run tests
-        run: pytest
+        run: pytest --ignore=tests/test_docker.py
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install test dependencies
+        run: pip install ".[dev,cogdb]"
+
+      - name: Run Docker tests
+        run: pytest tests/test_docker.py -v --timeout=600

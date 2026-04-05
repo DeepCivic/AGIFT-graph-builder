@@ -1,12 +1,19 @@
 """Stage 1: Fetch — pull full AGIFT hierarchy from TemaTres API."""
 
+import random
 import time
 import xml.etree.ElementTree as ET
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from urllib.request import Request, urlopen
 from urllib.error import URLError
 
 from agift.common import AGIFT_TOP_TO_DCAT, TEMATRES_BASE
+
+# Concurrency for alt-label fetches
+_ALT_LABEL_WORKERS = 10
+_MAX_RETRIES = 5
+_BASE_BACKOFF = 1.0  # seconds
 
 
 @dataclass
@@ -23,21 +30,21 @@ class AgiftTerm:
 
 
 def _fetch_xml(task: str, arg: str = "") -> ET.Element:
-    """Fetch XML from TemaTres API with retry."""
+    """Fetch XML from TemaTres API with exponential backoff and jitter."""
     url = f"{TEMATRES_BASE}?task={task}"
     if arg:
         url += f"&arg={arg}"
-    for attempt in range(3):
+    for attempt in range(_MAX_RETRIES):
         try:
             req = Request(url, headers={"User-Agent": "AGIFT-Graph-Import/1.0"})
             with urlopen(req, timeout=120) as resp:
                 data = resp.read().decode("utf-8")
                 return ET.fromstring(data)
         except (URLError, TimeoutError, ET.ParseError) as e:
-            if attempt == 2:
+            if attempt == _MAX_RETRIES - 1:
                 raise
-            wait = 5 * (attempt + 1)
-            print(f"  Retry {attempt + 1} for {task} {arg}: {e}")
+            wait = _BASE_BACKOFF * (2 ** attempt) + random.uniform(0, 1)
+            print(f"  Retry {attempt + 1} for {task} {arg}: {e} (wait {wait:.1f}s)")
             time.sleep(wait)
 
 
@@ -61,11 +68,26 @@ def _fetch_alt_labels(term_id: int) -> list[str]:
         return []
 
 
+def _fetch_alt_labels_batch(term_ids: list[int]) -> dict[int, list[str]]:
+    """Fetch alt labels for many terms concurrently.
+
+    Returns:
+        Dict mapping term_id -> list of alt label strings.
+    """
+    results: dict[int, list[str]] = {}
+    with ThreadPoolExecutor(max_workers=_ALT_LABEL_WORKERS) as pool:
+        futures = {pool.submit(_fetch_alt_labels, tid): tid for tid in term_ids}
+        for future in as_completed(futures):
+            tid = futures[future]
+            results[tid] = future.result()
+    return results
+
+
 def fetch_full_hierarchy(include_alts: bool = True) -> list[AgiftTerm]:
     """Walk the full AGIFT hierarchy from TemaTres and return all terms.
 
     Args:
-        include_alts: If True, fetch alt labels for each term (slower).
+        include_alts: If True, fetch alt labels for each term concurrently.
 
     Returns:
         List of AgiftTerm objects for the full 3-level hierarchy.
@@ -77,6 +99,7 @@ def fetch_full_hierarchy(include_alts: bool = True) -> list[AgiftTerm]:
     if not include_alts:
         print("  (skipping alt labels)")
 
+    # First pass: walk the hierarchy to collect all terms (structure only)
     all_terms: list[AgiftTerm] = []
 
     for top_id, top_label in top_terms:
@@ -85,7 +108,6 @@ def fetch_full_hierarchy(include_alts: bool = True) -> list[AgiftTerm]:
             print(f"  WARNING: No DCAT mapping for top-level '{top_label}', using GOVE")
             dcat = "GOVE"
 
-        alt_labels = _fetch_alt_labels(top_id) if include_alts else []
         all_terms.append(
             AgiftTerm(
                 term_id=top_id,
@@ -94,7 +116,6 @@ def fetch_full_hierarchy(include_alts: bool = True) -> list[AgiftTerm]:
                 top_level_id=top_id,
                 depth=1,
                 dcat_theme=dcat,
-                alt_labels=alt_labels,
             )
         )
 
@@ -104,7 +125,6 @@ def fetch_full_hierarchy(include_alts: bool = True) -> list[AgiftTerm]:
         print(f"  {top_label} ({dcat}): {len(l2_terms)} L2 terms")
 
         for l2_id, l2_label in l2_terms:
-            alt_labels = _fetch_alt_labels(l2_id) if include_alts else []
             all_terms.append(
                 AgiftTerm(
                     term_id=l2_id,
@@ -113,7 +133,6 @@ def fetch_full_hierarchy(include_alts: bool = True) -> list[AgiftTerm]:
                     top_level_id=top_id,
                     depth=2,
                     dcat_theme=dcat,
-                    alt_labels=alt_labels,
                 )
             )
 
@@ -122,7 +141,6 @@ def fetch_full_hierarchy(include_alts: bool = True) -> list[AgiftTerm]:
             l3_terms = _parse_terms(l3_root)
 
             for l3_id, l3_label in l3_terms:
-                alt_labels = _fetch_alt_labels(l3_id) if include_alts else []
                 all_terms.append(
                     AgiftTerm(
                         term_id=l3_id,
@@ -131,11 +149,21 @@ def fetch_full_hierarchy(include_alts: bool = True) -> list[AgiftTerm]:
                         top_level_id=top_id,
                         depth=3,
                         dcat_theme=dcat,
-                        alt_labels=alt_labels,
                     )
                 )
 
-        # Be polite to the API
-        time.sleep(2)
+        # Small courtesy pause between top-level groups
+        time.sleep(0.2)
+
+    # Second pass: fetch alt labels concurrently
+    if include_alts:
+        term_ids = [t.term_id for t in all_terms]
+        print(f"\nFetching alt labels for {len(term_ids)} terms "
+              f"({_ALT_LABEL_WORKERS} concurrent workers)...")
+        alt_map = _fetch_alt_labels_batch(term_ids)
+        for term in all_terms:
+            term.alt_labels = alt_map.get(term.term_id, [])
+        total_alts = sum(len(v) for v in alt_map.values())
+        print(f"  Fetched {total_alts} alt labels")
 
     return all_terms

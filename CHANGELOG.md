@@ -12,6 +12,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   implemented in both CogDB and Neo4j backends. Consumers no longer need to
   reach into the private `_get_props()` helper to access `dcat_theme` and
   other term attributes.
+- Unified Docker image (`deepcivic/agift`) replacing separate dashboard and
+  worker images. Single container runs dashboard + cron by default, with
+  `AGIFT_MODE` env var to select mode (`dashboard`, `worker`, `cli`).
+- Docker test suite (`tests/test_docker.py`) covering image structure, all
+  three container modes, and HTTP health checks.
+- Concurrent alt-label fetching via `ThreadPoolExecutor` (10 workers),
+  reducing fetch time for ~589 terms from sequential to ~59 batches.
+
+### Changed
+- Dashboard now runs pipeline in-process via `run_pipeline()` instead of
+  `docker exec` to the worker container. No more Docker-in-Docker.
+- Dashboard served by gunicorn (production WSGI server) instead of Flask
+  dev server.
+- TemaTres API courtesy pause reduced from `sleep(2)` to `sleep(0.2)`.
+- Retry logic upgraded to exponential backoff with jitter (up to 5 attempts).
+- Publish workflow builds single `deepcivic/agift` image instead of two.
+- Docker Hub description update removed from CI (manual for now).
+
+### Removed
+- Separate `dashboard/Dockerfile` and `worker/Dockerfile` (replaced by
+  unified `Dockerfile` at repo root).
 
 ## [0.1.1] - 2025-04-04
 
