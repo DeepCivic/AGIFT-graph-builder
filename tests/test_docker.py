@@ -414,7 +414,7 @@ class TestWorkerMode:
                 timeout=10,
             )
             assert "true" in inspect.stdout.lower(), (
-                f"Worker container not running. Logs:\n"
+                "Worker container not running. Logs:\n"
                 + _run(["docker", "logs", name], timeout=10).stdout
             )
 
