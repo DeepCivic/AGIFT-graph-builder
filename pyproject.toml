@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agift-graph"
-version = "0.2.0"
+version = "0.2.1"
 description = "Australian Government Interactive Functions Thesaurus (AGIFT) as a Neo4j knowledge graph with embeddings and dual edge types"
 readme = "README.md"
 license = {text = "Apache-2.0"}
@@ -59,7 +59,7 @@ agift = "agift.cli:main"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["agift*"]
-exclude = ["dashboard*", "worker*", "tests*"]
+exclude = ["dashboard*", "tests*"]
 
 [tool.setuptools.package-data]
 agift = ["*.py"]
