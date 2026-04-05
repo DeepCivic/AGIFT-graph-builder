@@ -131,12 +131,12 @@ The pipeline is designed for Docker. A single unified container runs the system 
 
 ## Release process
 
-The project uses a tag-based release workflow that publishes to PyPI and Docker Hub simultaneously. The changelog is the single source of truth for release notes — commit messages are not exposed publicly.
+The project uses a tag-based release workflow that publishes to PyPI and Docker Hub sequentially. A single CI workflow (`ci.yml`) defines all quality gates (lint, test, Docker tests). The publish workflow (`publish.yml`) calls `ci.yml` as a reusable workflow — CI jobs are never duplicated across workflow files. The changelog is the single source of truth for release notes — commit messages are not exposed publicly.
 
 1. **Update CHANGELOG.md** with a new version entry
 2. **Run `./release.sh 0.2.0`** — updates pyproject.toml, commits, tags
 3. **Push tags** — triggers GitHub Actions workflow
 
-The workflow builds and publishes the Python package to PyPI, builds and pushes the Docker image (`deepcivic/agift`), and creates a GitHub Release with the changelog entry.
+Pipeline sequence: CI (lint + test + Docker) → build PyPI → publish PyPI → publish Docker → GitHub Release.
 
 Docker images are tagged with the semantic version (`0.2.0`), major.minor (`0.2`), and `latest`.
